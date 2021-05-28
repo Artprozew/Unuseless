@@ -1,0 +1,17 @@
+#**/__pycache__
+__pycache__/
+.replit
+tests/
+data/
+/*.txt
+/*.png
+/*.ini
+/*.log
+/*.json
+/*.lock
+/*.toml
+!LICENSE
+!README.md
+!todo.txt
+!core/
+!gitignore
