@@ -514,19 +514,16 @@ async def corrida(ctx, *racers):
     if users:
         await asyncio.sleep(5)
         await ctx.channel.send('Corrida finalizada! 🏁')
-        winners2 = []
-        for user in users:
-            winners2.append(user)
-        random.shuffle(winners2)
+        random.shuffle(users)
         winners = ''
-        for index, value in enumerate(winners2):
+        for index, value in enumerate(users):
             index += 1
             if index == 1:
-                winners += f'Primeiro 🥇: {winners2[0]}\n'
+                winners += f'Primeiro 🥇: {value}\n'
             elif index == 2:
-                winners += f'Segundo 🥈: {winners2[1]}\n'
+                winners += f'Segundo 🥈: {value}\n'
             elif index == 3:
-                winners += f'Terceiro 🥉: {winners2[2]}\n'
+                winners += f'Terceiro 🥉: {value}\n'
             else:
                 winners += f'{index}º: {value}\n'
         await ctx.channel.send(f'Ganhadores:\n{winners}')
