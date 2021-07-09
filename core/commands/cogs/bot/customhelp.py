@@ -3,6 +3,7 @@ import typing
 import re
 import discord
 from discord.ext import commands
+from core import utils
 
 class CustomHelp(commands.HelpCommand):
     def get_command_signature(self, command): # This is a workaround because i couldn't implement this modifying the original Command.signature from Discord.py
@@ -70,7 +71,25 @@ class CustomHelp(commands.HelpCommand):
         channel = self.get_destination()
         if not help and not alias and not usage and not brief:
             embed.add_field(name=':(', value='Esse comando não tem nenhuma informação registrada')
-        await channel.send(embed=embed)
+        message = await channel.send(embed=embed)
+
+        '''await message.add_reaction('❔')
+        check = utils.funcs.reaction_check(message, '❔')
+        try:
+            reaction, user = await self.bot.wait_for('reaction_add', timeout=10.0, check=check)
+            await reaction.remove(self.bot.user)
+            embed.description = '
+            Legenda dos parâmetros:
+            `<argumento>` = Argumento necessário.
+            `[argumento]` = Argumento opcional.
+            `[--nome]` = Opcional, colocado no final da mensagem. Pode ser usado sozinho ou com mais argumentos caso necessário (Ex.: --nome Arthur). Geralmente pode ser usada alternativamente colocando apenas a sua inicial (Ex.: --n).
+            Lembrando que não é necessário colocar os argumentos entre <> ou [].
+            Exemplo de argumentos para o comando `repetir`: `>repetir Grapete repete --s`.
+            '
+            print(reaction, user)
+        except asyncio.TimeoutError:
+            await message.remove_reaction('❔', self.bot.user)
+        return'''
 
 
     async def send_cog_help(self, cog):
@@ -118,6 +137,9 @@ class Help(commands.Cog, name='Ajuda'):
 
 
     def cog_unload(self):
+        self.bot.help_command = self._original_help_command
+        
+    def teardown(self):
         self.bot.help_command = self._original_help_command
 
 

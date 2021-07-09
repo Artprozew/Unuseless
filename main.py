@@ -49,9 +49,11 @@ intents.reactions = True
 
 bot = commands.Bot(
     command_prefix=commands.when_mentioned_or('>'),
+    case_insensitive=True,
     intents=intents,
     activity=discord.Activity(type=discord.ActivityType.listening, name='comandos com " > " | >help')
     )
+bot._BotBase__cogs = commands.core._CaseInsensitiveDict()
 
 current_channel = 693944449084162169
 bot.uptime = None
@@ -178,6 +180,7 @@ async def mainloop():
                     emoji = ''.join(emoji)
                     userinput = userinput.replace(f'_:{i}:', emoji)
             
+            #asyncio.run_coroutine_threadsafe(send_message_to_channel(userinput, current_channel), bot.loop)
             asyncio.run_coroutine_threadsafe(send_hook(current_channel, userinput), bot.loop)
             #653491049771040781 # id da guild
             #data = {'content': userinput}
@@ -221,7 +224,8 @@ async def on_disconnect():
     hours, rem = divmod(end-bot.uptime, 3600)
     minutes, seconds = divmod(rem, 60)
     elapsed = '{:0>2}:{:0>2}:{:05.2f}'.format(int(hours), int(minutes), seconds)
-    await bot.appinfo.owner.send(f'Estou offline! Eu estive online por {elapsed}')
+    channel = bot.get_channel(856341000843034686)
+    await channel.send(f'Estou offline! Eu estive online por {elapsed}')
     print(f'Estou offline! Eu estive online por {elapsed}')
 
 
@@ -253,7 +257,7 @@ async def on_ready():
     #sys.excepthook = await asyncio.run(traceback_handling())
     #bot.remove_command('help')
     #await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='comandos com " > " | >help'))
-    Thread(target=asyncio.run, args=(mainloop(), )).start()
+    #Thread(target=asyncio.run, args=(mainloop(), )).start()
 
 
 @bot.event
@@ -268,19 +272,19 @@ async def on_error(event, *args, **kwargs):
 
 @bot.event
 async def on_message(message):
-    owner_display_name = bot.appinfo.owner.name
+    '''owner_display_name = bot.appinfo.owner.name
     if not isinstance(message.channel, discord.DMChannel):
         owner_display_name = await bot.get_guild(message.channel.guild.id).fetch_member(bot.appinfo.owner.id)
         owner_display_name = owner_display_name.display_name
-    '''if message.author == bot.user:
-        return'''
+    #if message.author == bot.user:
+    #    return
     if message.author.discriminator == '0000':
         if not message.author.name == owner_display_name:
             return
 
     if f'<@!{bot.appinfo.owner.id}>' in message.content or f'<@{bot.appinfo.owner.id}>' in message.content:
         if not message.channel.id == current_channel and not message.channel.id in mychannels:
-            msg = await utils.funcs.replace_emoji_id_by_name(message.content)
+            msg = utils.funcs.replace_emoji_id_by_name(message.content)
             msg = await utils.funcs.replace_user_id_by_name(bot, msg)
             print( f'{colors.FAIL}Ping de {message.author.name} em {message.guild.name}\n[#{message.channel.name}] {message.author}: {msg}{colors.ENDC}')
 
@@ -292,7 +296,7 @@ async def on_message(message):
             try:
                 msg_reply = await bot.get_channel(message.channel.id).fetch_message(message.reference.message_id)
                 msg_author = msg_reply.author.name
-                msg_reply = await utils.funcs.replace_emoji_id_by_name(msg_reply.content)
+                msg_reply = utils.funcs.replace_emoji_id_by_name(msg_reply.content)
                 msg_reply = await utils.funcs.replace_user_id_by_name(bot, msg_reply)
             except discord.errors.NotFound as exc: # 404 Not Found (error code 10008): Unknown Message ((Message deleted))
                 msg_reply = 'A mensagem original foi excluída.'
@@ -317,12 +321,41 @@ async def on_message(message):
     #hook = requests.post(None, json=data)
     #hook = Webhook.from_url(webhook_url, adapter=RequestsWebhookAdapter)
     #await hook.send(content=message.content, username=message.author.display_name, avatar_url=message.author.avatar_url)
-    
-    if message.content.startswith('gostosa ') or ' gostosa' in message.content or message.content == 'gostosa' or message.attachments and message.attachments[0].filename.startswith('SPOILER_'):
-        await message.add_reaction('<:gostosa:840014461590437969>')
-
-    if message.content.startswith('oi ') or ' oi' in message.content or message.content == 'oi':
-        await message.add_reaction('<:oi:791124512644136991>')#'<a:peepohi:724060904194441257>')
+    '''
+    if message.channel.id in mychannels:
+        '''if message.channel.id == 850168576836108320 or message.channel.id == 693944449084162169:
+            datenow = datetime.datetime.now(pytz.timezone('Brazil/East'))
+            dt = datetime.datetime(datenow.year, datenow.month, datenow.day, 0, 0)
+            dt = dt.replace(tzinfo=pytz.timezone('Brazil/East'))
+            dt = datetime.datetime.utcfromtimestamp(int(dt.timestamp() - 7 * 60))
+            counter = 1
+            users = []
+            async for message in message.channel.history(after=dt, oldest_first=True):
+                if counter > 3:
+                    break
+                if not message.author.id in users and not message.author.bot:
+                    if counter == 1:
+                        await message.add_reaction('🥇')
+                    elif counter == 2:
+                        await message.add_reaction('🥈')
+                    elif counter == 3:
+                        await message.add_reaction('🥉')
+                    counter += 1
+                    users.append(message.author.id)'''
+                    
+        if len(message.content.split(' ')) <= 3:
+            lowermsg = message.content.lower()
+            def CheckMessage(msg):
+                if re.search(f'(?:^.+\s+|^){msg}(?:\s+.+$|$)', lowermsg):
+                    return True
+                return False
+            
+            if CheckMessage('gostosa') or message.attachments and message.attachments[0].filename.startswith('SPOILER_'):
+                await message.add_reaction('<:gostosa:840014461590437969>')
+            if CheckMessage('oi'):
+                await message.add_reaction('<:oi:791124512644136991>')#'<a:peepohi:724060904194441257>')
+            if CheckMessage('burro'):
+                await message.add_reaction('<:burro:722622170450231377>')
 
     await bot.process_commands(message)
 
@@ -343,39 +376,6 @@ async def on_reaction_add(reaction, user):
                         await helpcmd.callback(ctx)'''
 
 
-def make_sequence(seq):
-    from collections.abc import Sequence
-    if seq is None:
-        return ()
-    if isinstance(seq, Sequence) and not isinstance(seq, str):
-        return seq
-    else:
-        return (seq,)
-
-
-def reaction_check(message=None, emoji=None, author=None, ignore_bot=True): # Thanks to Patrick Haugh on StackOverflow for sharing this function
-    '''Function to check arguments made mainly to use with the Client.wait_for "check" argument
-    
-    Usage example:
-    check = reaction_check("React with '❔' here", '❔', ctx.message.author)
-    reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)'''
-    message = make_sequence(message)
-    message = tuple(m.id for m in message)
-    emoji = make_sequence(emoji)
-    author = make_sequence(author)
-    def check(reaction, user):
-        if ignore_bot and user.bot:
-            return False
-        if message and reaction.message.id not in message:
-            return False
-        if emoji and reaction.emoji not in emoji:
-            return False
-        if author and user not in author:
-            return False
-        return True
-    return check
-
-
 @bot.event
 async def on_command_error(ctx, error):
     if hasattr(ctx.command, 'on_error'): # Ignore commands with local error handlers
@@ -392,10 +392,10 @@ async def on_command_error(ctx, error):
         if ctx.author.id == bot.appinfo.owner.id:
             ctx.command.reset_cooldown(ctx)
             return await ctx.command.reinvoke(ctx)
-        return await ctx.reply(f'O comando tá em cooldown!\nPera {error.retry_after:.0f} segundos aí blz')
+        return await ctx.reply(f'O comando tá em cooldown! Espera uns {error.retry_after:.1f} segundos aí.')
 
     elif isinstance(error, commands.MaxConcurrencyReached):
-        return await ctx.reply('Já tão usando esse comando!')
+        return await ctx.reply('Já tem alguém usando esse comando!')
 
     elif isinstance(error, commands.BotMissingPermissions):
         permissions = '\n'.join([f'{permission}' for permission in error.missing_perms])
@@ -407,6 +407,12 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.BadArgument):
         return await ctx.reply('Argumentos inválidos')
 
+    elif isinstance(error, commands.MissingRequiredArgument):
+        if hasattr(error, 'param'):
+            return await ctx.reply(f'O argumento do parâmetro `{error.param}` está faltando!')
+        else:
+            return await ctx.reply('Argumentos inválidos')
+
     elif isinstance(error, commands.DisabledCommand):
         return await ctx.reply('Esse comando está desativado')
 
@@ -415,7 +421,7 @@ async def on_command_error(ctx, error):
 
     elif isinstance(error, commands.CommandNotFound):
         await ctx.message.add_reaction('❔')
-        check = reaction_check(ctx.message, '❔', ctx.message.author)
+        check = utils.funcs.reaction_check(ctx.message, '❔', ctx.message.author)
         try:
             reaction, user = await bot.wait_for('reaction_add', timeout=5.0, check=check)
             await reaction.remove(bot.user)

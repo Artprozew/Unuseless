@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 
 
-class Aleatorios(commands.Cog):
+class Random(commands.Cog, name='Aleatórios'):
     def __init__(self, bot):
         self.bot = bot
 
@@ -21,6 +21,14 @@ class Aleatorios(commands.Cog):
         embed.add_field(name='Tipo de canal', value=ctx.channel.type)
         await ctx.reply(embed=embed)
 
+    
+    @commands.command(aliases=['reversetext', 'reverse', 'inverter', 'inverter_texto', 'invertertexto'])
+    async def reverse_text(self, ctx, *, text):
+        await ctx.reply(text[::-1])
+
+    @commands.command()
+    async def gusta(self, ctx, *, text):
+        await ctx.reply(', '.join(text.split(',')))
 
 def setup(bot):
-    bot.add_cog(Aleatorios(bot))
+    bot.add_cog(Random(bot))
