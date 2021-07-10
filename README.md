@@ -1,2 +1,3 @@
 # Unuseless
-A discord bot with some random commands, made with discord.py rewrite
+A discord bot with some random commands, made with discord.py rewrite.
+(Currently discontinued)
