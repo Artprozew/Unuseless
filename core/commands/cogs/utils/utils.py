@@ -36,14 +36,11 @@ class Utilidades(commands.Cog):
             #print(file_request.content)'''
         try:
             if attachment:
-                print('try')
                 try:
-                    print('encod')
                     encoded = base64.encodebytes(base_64)
-                    print('encod')
                 except Exception as e:
                     traceback.print_exc()
-                    print('hereeer')
+                    print('exception')
             else:
                 base_64 = base_64.encode()
                 encoded = base64.b64encode(base_64)
@@ -63,7 +60,6 @@ class Utilidades(commands.Cog):
     @commands.command()
     async def decodificar(self, ctx, *, base_64: typing.Optional[str], attachment: typing.Optional[discord.Attachment]=None, image: utils.option.Option=False):
         image = utils.option.OptionParam(base_64, True)
-        #image = True
         if image.content:
             base_64 = utils.funcs.remove_formattation(image.content)
                 
@@ -152,9 +148,7 @@ class Utilidades(commands.Cog):
         operator = [None]
         operant = []
         if tmp:
-            print('found')
             numberslist = tmp.group(1).split(',')
-            print('kk')
             for i in range(len(numberslist)):
                 try:
                     print(numberslist[i])
@@ -164,9 +158,7 @@ class Utilidades(commands.Cog):
                         numberslist[i] = int(numberslist[i])
                 except ValueError:
                     await ctx.reply(f'Eu ainda não conheço esse tipo de operação com {numberslist[i]}!')
-            print('final')
             args = args.replace(tmp.group(), '')
-        print('aca')
         print(args)
         '''for item in lst:
             if len(item) > 1 and not item.isdigit():
@@ -214,7 +206,6 @@ class Utilidades(commands.Cog):
             print(args)
             print(value)
             print(splitted, 'splitted')
-        print('k')
         print(message2)
         '''operant = []
         args = ' '.join(args)
@@ -296,7 +287,7 @@ class Utilidades(commands.Cog):
                     continue
             if index == len(operator):
                 break
-            print('aca')
+            print('calc')
             print(operant[index-1], operator[index], operant[index])
             if operator[index] == '*':
                 result = operant[index-1] * operant[index]
@@ -310,54 +301,40 @@ class Utilidades(commands.Cog):
                 result = operant[index-1] ** operant[index]
             operant[index] = result
         numbersresult = []
-        print('veei')
         print(result)
-        print('que')
+        if storedoperator:
+            operator[1] = storedoperator
+            print(operator[1])
+        if numberslist:
+            if re.search('\d+\.?\d*', str(result)):
+                result_isfloat = True
+            else:
+                result_isfloat = False
+            for index, value in enumerate(numberslist):
+                print(index, value)
+                if result_isfloat:
+                    numberslist[index] = float(numberslist[index])
+                    print(numberslist)
+                    if operator[1] == '*':
+                        numbersresult.append(numberslist[index] * result)
+                    elif operator[1] == '/':
+                        numbersresult.append(numberslist[index] / result)
+                    elif operator[1] == '+':
+                        numbersresult.append(numberslist[index] + result)
+                    elif operator[1] == '-':
+                        numbersresult.append(numberslist[index] - result)
+                    elif operator[1] == '**':
+                        numbersresult.append(numberslist[index] ** result)
+            print(numbersresult)
+            for index, value in enumerate(numbersresult):
+                print(index, value)
+                numbersresult[index] = float(numbersresult[index])
+                numbersresult[index] = str(round(numbersresult[index], 2))
+            numbersresult = ', '.join(numbersresult)
+            result = f'({numbersresult}) {operator[1]} {result}'
+            print('result')
+            print(result)
         try:
-            if storedoperator:
-                operator[1] = storedoperator
-                print(operator[1])
-        except:
-            traceback.print_exc()
-        try:
-            print('fim')
-            if numberslist:
-                print('yes')
-                if re.search('\d+\.?\d*', str(result)):
-                    result_isfloat = True
-                else:
-                    result_isfloat = False
-                for index, value in enumerate(numberslist):
-                    print(index, value)
-                    if result_isfloat:
-                        numberslist[index] = float(numberslist[index])
-                        print(numberslist)
-                        if operator[1] == '*':
-                            numbersresult.append(numberslist[index] * result)
-                        elif operator[1] == '/':
-                            numbersresult.append(numberslist[index] / result)
-                        elif operator[1] == '+':
-                            numbersresult.append(numberslist[index] + result)
-                        elif operator[1] == '-':
-                            numbersresult.append(numberslist[index] - result)
-                        elif operator[1] == '**':
-                            numbersresult.append(numberslist[index] ** result)
-                print('aqui')
-                print(numbersresult)
-                print('vache')
-                print('antes')
-                for index, value in enumerate(numbersresult):
-                    print(index, value)
-                    numbersresult[index] = float(numbersresult[index])
-                    numbersresult[index] = str(round(numbersresult[index], 2))
-                numbersresult = ', '.join(numbersresult)
-                result = f'({numbersresult}) {operator[1]} {result}'
-                print('aaa')
-                print(result)
-        except:
-            traceback.print_exc()
-        try:
-            print('aooooo')
             print('result:', result)
             await ctx.reply(f'Resultado: {result}')
         except discord.errors.HTTPException:

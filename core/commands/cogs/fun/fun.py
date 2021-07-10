@@ -152,7 +152,7 @@ class Fun(commands.Cog, name='Diversão'):
 
     @commands.command()
     @commands.max_concurrency(1, commands.BucketType.guild)
-    async def ejetar2(self, ctx, *, args):
+    async def ejetar2(self, ctx, *, args): # Doesnt work for some reason
         msg = await ctx.channel.send('.')
         impostor = random.randint(0, 1)
         '''if impostor == 1:
@@ -203,9 +203,9 @@ class Fun(commands.Cog, name='Diversão'):
                 #sendedmsg = f'{stars[1]}\n{stars[2]}\n{stars[3]}\n{leftstars[0]:<{length2}}{currmsg:^{length2}}{rightstars[0]:>{length2}}\n{leftstars[1]:<{length3}}{" ":^{length3}}{rightstars[1]:>{length3}}\n{stars[6]}\n{stars[7]}'
                 print(sendedmsg)
                 #msg = msg
-                #print('1kkk')
+                #print('1')
                 await msg.edit(content=sendedmsg)
-                #print('2kkk')
+                #print('2')
                 await asyncio.sleep(0.7)
             
         sendedmsg = sendedmsg.split('\n')

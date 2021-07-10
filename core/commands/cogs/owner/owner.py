@@ -71,6 +71,7 @@ class Owner(commands.Cog):
         if not failed:
             await ctx.reply(f'Todos os Cogs foram recarregados!')
 
+
     @commands.command()
     @commands.is_owner()
     async def teste(self, ctx):
@@ -103,30 +104,17 @@ class Owner(commands.Cog):
 
     @commands.command()
     @commands.is_owner()
-    async def evaluate(self, ctx, *args, awaitfirst=False):
-        print('started')
+    async def evaluate(self, ctx, *, args: utils.option.OptionConverter, awaitfirst: utils.option.Option=False):
+        execargs = args.content
+        while execargs.startswith(' '):
+            execargs = execargs[1:]
+        print(execargs)
+        execargs = utils.funcs.remove_formattation(execargs)
         try:
-            execargs = ''
-            for arg in args:
-                if arg == '--awaitfirst=true' or arg == '--awaitfirst=True' or arg.startswith('await'):
-                    awaitfirst = True
-                    continue
-                execargs = execargs + ' ' + arg
-            while execargs.startswith(' '):
-                execargs = execargs[1:]
-            print(execargs)
-            execargs = utils.funcs.remove_formattation(execargs)
-        except Exception as e:
-            print(e)
-        try:
-            if awaitfirst:
-                print('here')
+            if args.is_option('awaitfirst', 'af'):
                 await ctx.reply(await eval(execargs))
-                print('here')
             else:
-                print('doing')
                 await ctx.reply(eval(f'{execargs}'))
-                print('doing')
         except Exception as exc:
             exc_type, exc_value, exc_tb = sys.exc_info()
             #exc = traceback.format_exc(chain=False)
@@ -142,10 +130,8 @@ class Owner(commands.Cog):
 
     @commands.command()
     @commands.is_owner()
-    async def execute(self, ctx, *args):
-        execargs = ''
-        for arg in args:
-            execargs = execargs + ' ' + arg
+    async def execute(self, ctx, *, args):
+        execargs = args
         while execargs.startswith(' '):
             execargs = execargs[1:]
         execargs = utils.funcs.remove_formattation(execargs)

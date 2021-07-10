@@ -1,21 +1,13 @@
 import os
-import sys
-from discord import Webhook, RequestsWebhookAdapter
 from discord.ext import commands
 import discord
-import requests
 import datetime
 import pytz
 from threading import Thread
 import time
 import asyncio
-import random
 import traceback
 import re
-from typing import Optional
-import base64
-from io import StringIO
-from contextlib import redirect_stdout, redirect_stderr
 import logging
 import keep_alive
 from core import utils
@@ -194,21 +186,13 @@ def ShowTime():
     timeanddate = datetime.datetime.now(tz)
     daynumber = timeanddate.weekday()
     dayname = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
-    searchall = re.search('(\d+)-(\d+)-(\d+)\s+(\d+):(\d+):(\d+)\.\d+', str(timeanddate))
-    if searchall:
-        year = searchall.group(1)
-        month = searchall.group(2)
-        day = searchall.group(3)
-        hour = searchall.group(4)
-        minute = searchall.group(5)
-        second = searchall.group(6)
-        dayofweek = dayname[daynumber]
-        if not daynumber == 5 and not daynumber == 6:
-            dayofweek = '{}-Feira'.format(dayofweek)
-        stringtime = 'Data: {}/{}/{}, {}\nHora: {}:{}:{}'.format(day, month, year, dayofweek, hour, minute, second)
-        if int(hour) > 5 and int(hour) < 8 and Alarme:
-            print(colors.WARNING + 'VAI DORMIR\nVAI DORMIR\nVAI DORMIR\t\tVAI DORMIR\nVAI DORMIR\t\tVAI DORMIR\nVAI DORMIR\t\tVAI DORMIR')
-        return stringtime
+    dayofweek = dayname[daynumber]
+    if not daynumber == 5 and not daynumber == 6:
+        dayofweek = '{}-Feira'.format(dayofweek)
+    stringtime = 'Data: {}/{}/{}, {}\nHora: {}:{}:{}'.format(timeanddate.day, timeanddate.month, timeanddate.year, dayofweek, timeanddate.hour, timeanddate.minute, timeanddate.second)
+    if int(timeanddate.hour) > 5 and int(timeanddate.hour) < 8 and Alarme:
+        print(colors.WARNING + 'VAI DORMIR\nVAI DORMIR\nVAI DORMIR\t\tVAI DORMIR\nVAI DORMIR\t\tVAI DORMIR\nVAI DORMIR\t\tVAI DORMIR')
+    return stringtime
 
 
 @bot.event
@@ -248,14 +232,6 @@ async def on_ready():
                 except (discord.ClientException, ModuleNotFoundError):
                     print(f'Failed to load extension {file}')
                     traceback.print_exc()
-    #bot.load_extension('core.commands.cogs.bot.customhelp')
-    #bot.load_extension('core.commands.cogs.owner.owner')
-    '''with open('pato.jpeg', 'rb') as file:
-        image = file.read()
-        await bot.user.edit(avatar=image)'''
-    #await bot.user.edit(avatar_url=bot.appinfo.owner.avatar_url)
-    #sys.excepthook = await asyncio.run(traceback_handling())
-    #bot.remove_command('help')
     #await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='comandos com " > " | >help'))
     #Thread(target=asyncio.run, args=(mainloop(), )).start()
 
@@ -322,8 +298,8 @@ async def on_message(message):
     #hook = Webhook.from_url(webhook_url, adapter=RequestsWebhookAdapter)
     #await hook.send(content=message.content, username=message.author.display_name, avatar_url=message.author.avatar_url)
     '''
-    if message.channel.id in mychannels:
-        '''if message.channel.id == 850168576836108320 or message.channel.id == 693944449084162169:
+    '''if message.channel.id in mychannels:
+        if message.channel.id == 850168576836108320 or message.channel.id == 693944449084162169:
             datenow = datetime.datetime.now(pytz.timezone('Brazil/East'))
             dt = datetime.datetime(datenow.year, datenow.month, datenow.day, 0, 0)
             dt = dt.replace(tzinfo=pytz.timezone('Brazil/East'))
@@ -341,7 +317,7 @@ async def on_message(message):
                     elif counter == 3:
                         await message.add_reaction('🥉')
                     counter += 1
-                    users.append(message.author.id)'''
+                    users.append(message.author.id)
                     
         if len(message.content.split(' ')) <= 3:
             lowermsg = message.content.lower()
@@ -355,25 +331,9 @@ async def on_message(message):
             if CheckMessage('oi'):
                 await message.add_reaction('<:oi:791124512644136991>')#'<a:peepohi:724060904194441257>')
             if CheckMessage('burro'):
-                await message.add_reaction('<:burro:722622170450231377>')
+                await message.add_reaction('<:burro:722622170450231377>')''' # Personal server
 
     await bot.process_commands(message)
-
-
-@bot.event
-async def on_reaction_add(reaction, user):
-    '''args = reaction.message.split()
-    command = args[0][1:] if args[0].startswith(bot.command_prefix) else None
-    params = args[1:] if command else None
-    if command:
-        cmd = discord.utils.get(bot.commands, name=command)
-        if not cmd:
-            async for user_react in reaction.users():
-                if user_react == bot.user:
-                    reaction.remove(user)
-                    helpcmd = discord.utils.get(bot.commands, name='ajuda')
-                    if helpcmd:
-                        await helpcmd.callback(ctx)'''
 
 
 @bot.event
@@ -436,36 +396,5 @@ async def on_command_error(ctx, error):
     else:
         print(f'Erro na execução do comando: {ctx.command}')
         traceback.print_exception(type(error), error, error.__traceback__)
-
-
-'''@bot.command()
-async def ajuda(ctx, cmd=None):
-    if not cmd:
-        embed = discord.Embed(title='Ajuda', description='Comandos do bot', timestamp=datetime.datetime.utcnow())
-        cmd_help = []
-        for command in bot.walk_commands():
-            params = ''
-            for index, param in enumerate(command.params):
-                if index == 0:
-                    continue
-                params +=f'{param} '
-            #cmd_help.append(f'{command:<20} {params:>20}')
-            if not params:
-                params = 'Nenhum'
-            embed.add_field(name=command, value=params)
-                
-            if command.parents:
-                if command.parents[0] == command:
-                    print(command.parents[0], 'PAAAAAAAARENT')
-                
-            #print(dir(command))
-        await ctx.reply(embed=embed)
-    elif cmd in (cmds:={command.name: command for command in bot.commands}):
-        embed = discord.Embed(title=f'Comando: {cmd}', description=cmds[cmd].help, timestamp=datetime.datetime.utcnow())
-        await ctx.reply(embed=embed)
-        #await ctx.reply('cmd: ' + cmds[cmd].help)
-    else:
-        await ctx.reply('Comando não encontrado')'''
-
 
 bot.run(bot_token)

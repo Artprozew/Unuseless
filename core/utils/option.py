@@ -15,7 +15,7 @@ class OptionConverter(commands.Converter):
         return OptionParam(args, True)
 
 
-class OptionParam():
+class OptionParam(): # Still needs some improvements
     def __init__(self, option=None, strip=False):
         self.options = {}
         self.content = option
