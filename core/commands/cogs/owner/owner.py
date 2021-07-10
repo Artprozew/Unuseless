@@ -1,7 +1,11 @@
 from discord.ext import commands
-from  core import utils
+from core import utils
+import sys
+import traceback
+import io
+import contextlib
 
-async def cog_handler(ctx, mode, bot, cog):
+async def cog_handler(ctx, bot, mode, cog):
     if '.' in cog:
         try:
             if mode == 'reload':
@@ -34,19 +38,19 @@ class Owner(commands.Cog):
     @commands.command(aliases=['loadcog', 'lcog'])
     @commands.is_owner()
     async def load_cog(self, ctx, cog):
-        await cog_handler(ctx, 'load', self.bot, cog)
+        await cog_handler(ctx, self.bot, 'load', cog)
 
 
     @commands.command(aliases=['unloadcog', 'ucog'])
     @commands.is_owner()
     async def unload_cog(self, ctx, cog):
-        await cog_handler(ctx, 'unload', self.bot, cog)
+        await cog_handler(ctx, self.bot, 'unload', cog)
 
 
     @commands.command(aliases=['reloadcog', 'rcog'])
     @commands.is_owner()
     async def reload_cog(self, ctx, cog):
-        await cog_handler(ctx, 'reload', self.bot, cog)
+        await cog_handler(ctx, self.bot, 'reload', cog)
 
     
     @commands.command(aliases=['reloadallcogs', 'rall'])
@@ -58,7 +62,7 @@ class Owner(commands.Cog):
         for cog in cogs:
             try:
                 self.bot.reload_extension(cog)
-            except commands.errors.ExtensionNotLoaded:
+            except commands.ExtensionNotLoaded:
                 if not opt.is_option('load_again', 'l'):
                     self.bot.load_extension(cog)
             except (commands.ExtensionFailed, commands.ExtensionError) as exc:
@@ -67,10 +71,11 @@ class Owner(commands.Cog):
         if not failed:
             await ctx.reply(f'Todos os Cogs foram recarregados!')
 
+
     @commands.command()
     @commands.is_owner()
     async def teste(self, ctx):
-        await ctx.reply('teste')
+        await ctx.reply(ctx.channel.last_message)
 
 
     @commands.command()
@@ -99,30 +104,17 @@ class Owner(commands.Cog):
 
     @commands.command()
     @commands.is_owner()
-    async def evaluate(self, ctx, *args, awaitfirst=False):
-        print('started')
+    async def evaluate(self, ctx, *, args: utils.option.OptionConverter, awaitfirst: utils.option.Option=False):
+        execargs = args.content
+        while execargs.startswith(' '):
+            execargs = execargs[1:]
+        print(execargs)
+        execargs = utils.funcs.remove_formattation(execargs)
         try:
-            execargs = ''
-            for arg in args:
-                if arg == '--awaitfirst=true' or arg == '--awaitfirst=True' or arg.startswith('await'):
-                    awaitfirst = True
-                    continue
-                execargs = execargs + ' ' + arg
-            while execargs.startswith(' '):
-                execargs = execargs[1:]
-            print(execargs)
-            execargs = remove_formattation(execargs)
-        except Exception as e:
-            print(e)
-        try:
-            if awaitfirst:
-                print('here')
+            if args.is_option('awaitfirst', 'af'):
                 await ctx.reply(await eval(execargs))
-                print('here')
             else:
-                print('doing')
                 await ctx.reply(eval(f'{execargs}'))
-                print('doing')
         except Exception as exc:
             exc_type, exc_value, exc_tb = sys.exc_info()
             #exc = traceback.format_exc(chain=False)
@@ -138,22 +130,16 @@ class Owner(commands.Cog):
 
     @commands.command()
     @commands.is_owner()
-    async def execute(self, ctx, *args):
-        print(args)
+    async def execute(self, ctx, *, args):
+        execargs = args
+        while execargs.startswith(' '):
+            execargs = execargs[1:]
+        execargs = utils.funcs.remove_formattation(execargs)
         try:
-            execargs = ''
-            for arg in args:
-                execargs = execargs + ' ' + arg
-            while execargs.startswith(' '):
-                execargs = execargs[1:]
-            execargs = remove_formattation(execargs)
-        except Exception as e:
-            print(e)
-        try:
-            result = StringIO()
-            with redirect_stdout(result), redirect_stderr(result):
-                exec(f'async def __ex(ctx): ' + ''.join(f'\n {l}' for l in execargs.split('\n')))
-                await locals()['__ex'](ctx)
+            result = io.StringIO()
+            with contextlib.redirect_stdout(result), contextlib.redirect_stderr(result):
+                exec(f'async def __ex(self, ctx): ' + ''.join(f'\n {line}' for line in execargs.split('\n')))
+                await locals()['__ex'](self, ctx)
             result = result.getvalue()
             if result:
                 await ctx.reply(f'Resultado: ```py\n{result}```')

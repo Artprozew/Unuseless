@@ -1,6 +1,12 @@
 import discord
 from discord.ext import commands
-from typing import Optional
+import aiohttp
+import typing
+from core import utils
+import re
+import base64
+import traceback
+import os
 
 
 class Utilidades(commands.Cog):
@@ -8,22 +14,19 @@ class Utilidades(commands.Cog):
         self.bot = bot
 
 
-    @commands.command()
-    async def codificar(self, ctx, *base_64, attachment: Optional=None, image: Optional[bool]=False):
+    @commands.command(
+        help='Codifica uma mensagem ou imagem em código Base64'
+    )
+    async def codificar(self, ctx, *, base_64: typing.Optional[str], attachment: typing.Optional[discord.Attachment]=None):
         if base_64:
-            message = ''
-            for arg in base_64:
-                if '--image=true' in arg or '--image=True' in arg:
-                    image = True
-                    print('true')
-                    continue
-                message = message + ' ' + arg
-            base_64 = message
-            base_64 = remove_formattation(base_64)
+            base_64 = utils.funcs.remove_formattation(base_64)
         if ctx.message.attachments:
-            attachment_url = ctx.message.attachments[0].url
-            file_request = requests.get(attachment_url)
-            base_64 = file_request.content
+            attachment = True
+            async with aiohttp.ClientSession() as session:
+                async with session.get(ctx.message.attachments[0].url) as response:
+                    base_64 = await response.read()
+        else:
+            await ctx.reply('Coloque uma mensagem ou uma imagem para ser codificada!')
         '''tmp = re.search('^\w+:\w+/(\w+);base64,', base_64)
         print('hee')
         if tmp:
@@ -32,16 +35,12 @@ class Utilidades(commands.Cog):
             image = True
             #print(file_request.content)'''
         try:
-            if image:
-                print('try')
+            if attachment:
                 try:
-                    print('encod')
-                    print('encod')
                     encoded = base64.encodebytes(base_64)
-                    print('encod')
                 except Exception as e:
                     traceback.print_exc()
-                    print('hereeer')
+                    print('exception')
             else:
                 base_64 = base_64.encode()
                 encoded = base64.b64encode(base_64)
@@ -59,36 +58,27 @@ class Utilidades(commands.Cog):
 
 
     @commands.command()
-    async def decodificar(ctx, *base_64: Optional[str], attachment: Optional=None, image: Optional=False):
-        print('start')
-        #image = True
-        if base_64:
-            for arg in base_64:
-                message = ''
-                if '--image=True' in base_64 or '--image=true' in base_64:
-                    print('true')
-                    image = True
-                    continue
-                message = message + ' ' + arg
-            base_64 = message
-            base_64 = remove_formattation(base_64)
+    async def decodificar(self, ctx, *, base_64: typing.Optional[str], attachment: typing.Optional[discord.Attachment]=None, image: utils.option.Option=False):
+        image = utils.option.OptionParam(base_64, True)
+        if image.content:
+            base_64 = utils.funcs.remove_formattation(image.content)
                 
-        if ctx.message.attachments:
-            attachment_url = ctx.message.attachments[0].url
-            file_request = requests.get(attachment_url)
-            base_64 = file_request.content
-            print('hee')
-            '''tmp = re.search('^(\w+:\w+/(\w+);base64,)', base_64)
-            print('hee')
-            if tmp:
-                base_64 = base_64.replace(tmp.group(1), '')
-                image = True
-                print('true')'''
+        elif ctx.message.attachments:
+            attachment = True
+            async with aiohttp.ClientSession() as session:
+                async with session.get(ctx.message.attachments[0].url) as response:
+                    base_64 = await response.read()
+        '''tmp = re.search('^(\w+:\w+/(\w+);base64,)', base_64)
+        print('hee')
+        if tmp:
+            base_64 = base_64.replace(tmp.group(1), '')
+            image = True
+            print('true')'''
         print('if imfg')
-        if image:
-            print('try')
+        if image.is_option('image', 'i'):
             try:
-                decoded = base64.decodebytes(base_64)
+                decoded = base64.b64decode(base_64)
+                #decoded = base64.decodebytes(decoded)
             except Exception:
                 traceback.print_exc()
                 await ctx.reply('Não identificado como uma imagem em bytes codificado em Base64')
@@ -101,7 +91,6 @@ class Utilidades(commands.Cog):
                 openwith = 'bmp'
             else:'''
             openwith = 'jpeg'
-            print('aaa')
             with open(f'{ctx.author.id}.{openwith}', 'wb') as file:
                 file.write(decoded)
             file = discord.File(f'{ctx.author.id}.{openwith}')
@@ -126,41 +115,40 @@ class Utilidades(commands.Cog):
 
 
     @commands.command()
-    async def textlength(ctx, *text: Optional[str], attachment: Optional[discord.Attachment]=None):
+    async def textlength(self, ctx, *, text: typing.Optional[str], attachment: typing.Optional[discord.Attachment]=None):
+        args = ''
         if text:
-            args = ''
-            for arg in text:
-                args = args + ' ' + arg
-            args = remove_formattation(args)
-            args = replace_emoji_id_by_name(args)
-        if ctx.message.attachments:
-            attachment_url = ctx.message.attachments[0].url
-            file_request = requests.get(attachment_url)
-            args = file_request.content
+            args = utils.funcs.remove_formattation(text)
+            #args = utils.funcs.replace_emoji_id_by_name(args)
+        elif ctx.message.attachments:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(ctx.message.attachments[0].url) as response:
+                    args = await response.read()
             args = args.decode()
         while args.startswith(' '):
             args = args[1:]
         length = len(args)
+        tmp = re.findall('(<\w*(:\w+:)\d+>)', args)
+        if tmp:
+            length = len(args)
+            for group in tmp:
+                length -= len(group[0])
+                length += 1
         if length == 1:
-            await ctx.reply(f'Isso é apenas {length} caracter')
+            await ctx.reply(f'Isso é apenas {length} caracter/emoji')
         else:
-            await ctx.reply(f'Essa frase têm {length} caracteres')
+            await ctx.reply(f'Essa frase tem {length} caracteres/emojis')
 
 
     @commands.command()
-    async def calcular(ctx, *args):
-        message = ''
-        for arg in args:
-            message = message + ' ' + arg
-        print(message)
-        tmp = re.search('\((.+)\)', message)
+    async def calcular(self, ctx, *, args):
+        print(args)
+        tmp = re.search('\((.+)\)', args)
         numberslist = []
         operator = [None]
         operant = []
         if tmp:
-            print('found')
             numberslist = tmp.group(1).split(',')
-            print('kk')
             for i in range(len(numberslist)):
                 try:
                     print(numberslist[i])
@@ -170,18 +158,16 @@ class Utilidades(commands.Cog):
                         numberslist[i] = int(numberslist[i])
                 except ValueError:
                     await ctx.reply(f'Eu ainda não conheço esse tipo de operação com {numberslist[i]}!')
-            print('final')
-            message = message.replace(tmp.group(), '')
-        print('aca')
-        print(message)
+            args = args.replace(tmp.group(), '')
+        print(args)
         '''for item in lst:
             if len(item) > 1 and not item.isdigit():
             return False
         return True'''
-        message = message.split(' ')
+        args = args.split(' ')
         splitted = ''
         message2 = []
-        for index, value in enumerate(message):
+        for index, value in enumerate(args):
             if value == '' or value == ' ':
                 continue
             if '**' in value or '^' in value:
@@ -214,24 +200,23 @@ class Utilidades(commands.Cog):
                 operant.append(int(value))
             if re.search('^\d+\.?\d*$', value):
                 operant.append(float(value))
-            #message = splitted
+            #args = splitted
             for i in value.split():
                 message2.append(i)
-            print(message)
+            print(args)
             print(value)
             print(splitted, 'splitted')
-        print('k')
         print(message2)
         '''operant = []
-        message = ' '.join(message)
-        message = message.split(' ')
-        for i in message:
+        args = ' '.join(args)
+        args = args.split(' ')
+        for i in args:
             print(i)
             if i.isnumeric():
                 operant.append(int(i))
             elif re.search('^\d+\.?\d*$', i):
                 operant.append(float(i))'''
-        print(message)
+        print(args)
         print(operator, operant)
         operator = [None]
         operant = []
@@ -302,7 +287,7 @@ class Utilidades(commands.Cog):
                     continue
             if index == len(operator):
                 break
-            print('aca')
+            print('calc')
             print(operant[index-1], operator[index], operant[index])
             if operator[index] == '*':
                 result = operant[index-1] * operant[index]
@@ -316,54 +301,40 @@ class Utilidades(commands.Cog):
                 result = operant[index-1] ** operant[index]
             operant[index] = result
         numbersresult = []
-        print('veei')
         print(result)
-        print('que')
+        if storedoperator:
+            operator[1] = storedoperator
+            print(operator[1])
+        if numberslist:
+            if re.search('\d+\.?\d*', str(result)):
+                result_isfloat = True
+            else:
+                result_isfloat = False
+            for index, value in enumerate(numberslist):
+                print(index, value)
+                if result_isfloat:
+                    numberslist[index] = float(numberslist[index])
+                    print(numberslist)
+                    if operator[1] == '*':
+                        numbersresult.append(numberslist[index] * result)
+                    elif operator[1] == '/':
+                        numbersresult.append(numberslist[index] / result)
+                    elif operator[1] == '+':
+                        numbersresult.append(numberslist[index] + result)
+                    elif operator[1] == '-':
+                        numbersresult.append(numberslist[index] - result)
+                    elif operator[1] == '**':
+                        numbersresult.append(numberslist[index] ** result)
+            print(numbersresult)
+            for index, value in enumerate(numbersresult):
+                print(index, value)
+                numbersresult[index] = float(numbersresult[index])
+                numbersresult[index] = str(round(numbersresult[index], 2))
+            numbersresult = ', '.join(numbersresult)
+            result = f'({numbersresult}) {operator[1]} {result}'
+            print('result')
+            print(result)
         try:
-            if storedoperator:
-                operator[1] = storedoperator
-                print(operator[1])
-        except:
-            traceback.print_exc()
-        try:
-            print('fim')
-            if numberslist:
-                print('yes')
-                if re.search('\d+\.?\d*', str(result)):
-                    result_isfloat = True
-                else:
-                    result_isfloat = False
-                for index, value in enumerate(numberslist):
-                    print(index, value)
-                    if result_isfloat:
-                        numberslist[index] = float(numberslist[index])
-                        print(numberslist)
-                        if operator[1] == '*':
-                            numbersresult.append(numberslist[index] * result)
-                        elif operator[1] == '/':
-                            numbersresult.append(numberslist[index] / result)
-                        elif operator[1] == '+':
-                            numbersresult.append(numberslist[index] + result)
-                        elif operator[1] == '-':
-                            numbersresult.append(numberslist[index] - result)
-                        elif operator[1] == '**':
-                            numbersresult.append(numberslist[index] ** result)
-                print('aqui')
-                print(numbersresult)
-                print('vache')
-                print('antes')
-                for index, value in enumerate(numbersresult):
-                    print(index, value)
-                    numbersresult[index] = float(numbersresult[index])
-                    numbersresult[index] = str(round(numbersresult[index], 2))
-                numbersresult = ', '.join(numbersresult)
-                result = f'({numbersresult}) {operator[1]} {result}'
-                print('aaa')
-                print(result)
-        except:
-            traceback.print_exc()
-        try:
-            print('aooooo')
             print('result:', result)
             await ctx.reply(f'Resultado: {result}')
         except discord.errors.HTTPException:

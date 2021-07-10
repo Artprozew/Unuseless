@@ -38,7 +38,7 @@ def search_cogs_paths(*cogs, return_all_cogs: bool=False, directory='core/comman
     return cogpaths
 
 
-async def replace_emoji_id_by_name(message):
+def replace_emoji_id_by_name(message):
     tmp = re.findall('(<\w*(:\w+:)\d+>)', message)
     if tmp:
         for group in tmp:
@@ -66,3 +66,37 @@ def remove_formattation(formatted_string):
     formatted_string = re.sub('^(`)', '', formatted_string)
     formatted_string = re.sub('(`)$', '', formatted_string)
     return formatted_string
+
+
+def reaction_check(message=None, emoji=None, author=None, ignore_bot=True): # Thanks to Patrick Haugh on StackOverflow for sharing this function
+    '''Function to check arguments made mainly to use with the Client.wait_for "check" parameter
+    
+    Usage example:
+    check = reaction_check(ctx.message, '❔', ctx.message.author)
+    reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)'''
+
+    def make_sequence(seq):
+        from collections.abc import Sequence
+        if seq is None:
+            return ()
+        if isinstance(seq, Sequence) and not isinstance(seq, str):
+            return seq
+        else:
+            return (seq,)
+
+    message = make_sequence(message)
+    message = tuple(m.id for m in message)
+    emoji = make_sequence(emoji)
+    author = make_sequence(author)
+
+    def check(reaction, user):
+        if ignore_bot and user.bot:
+            return False
+        if message and reaction.message.id not in message:
+            return False
+        if emoji and reaction.emoji not in emoji:
+            return False
+        if author and user not in author:
+            return False
+        return True
+    return check
