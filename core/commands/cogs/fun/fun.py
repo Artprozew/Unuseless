@@ -2,9 +2,9 @@ import asyncio
 import random
 import time
 import typing
-
 import discord
 from discord.ext import commands
+from core import utils
 
 from core import utils # pylint: disable=import-error
 
@@ -32,7 +32,6 @@ class Fun(commands.Cog, name='Diversão'):
         await ctx.channel.send('1')
         await asyncio.sleep(1)
         await ctx.channel.send('VAAAAAII!!!!')
-
         async def ShowRanking(participants):
             if participants:
                 random.shuffle(participants)

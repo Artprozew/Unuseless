@@ -34,7 +34,15 @@ class OptionParam(str): # Still needs some improvements?
         return OptionParam(other + str(self), self.options)
 
 
-    def parse_option(self, option):
+
+class OptionParam(): # Still needs some improvements
+    def __init__(self, option=None, strip=False):
+        self.options = {}
+        self.content = option
+        if option:
+            self.parse_option(option, strip)
+
+    def parse_option(self, option, strip=False):
         if isinstance(option, (list, tuple)):
             option = ' '.join(option)
         if isinstance(option, str):

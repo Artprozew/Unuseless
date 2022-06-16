@@ -423,7 +423,6 @@ class Utilidades(commands.Cog):
                 except ValueError:
                     await ctx.reply(f'Eu ainda não conheço esse tipo de operação com {numberslist[i]}!')
             args = args.replace(tmp.group(), '')
-
         '''for item in lst:
             if len(item) > 1 and not item.isdigit():
             return False
@@ -431,7 +430,6 @@ class Utilidades(commands.Cog):
         args = args.split(' ')
         splitted = ''
         message2 = []
-
         for index, value in enumerate(args):
             if value == '' or value == ' ':
                 continue
@@ -468,7 +466,6 @@ class Utilidades(commands.Cog):
             #args = splitted
             for i in value.split():
                 message2.append(i)
-
         '''operant = []
         args = ' '.join(args)
         args = args.split(' ')
@@ -478,7 +475,6 @@ class Utilidades(commands.Cog):
                 operant.append(int(i))
             elif re.search('^\d+\.?\d*$', i):
                 operant.append(float(i))'''
-
         operator = [None]
         operant = []
 
@@ -549,7 +545,6 @@ class Utilidades(commands.Cog):
                     continue
             if index == len(operator):
                 break
-
             if operator[index] == '*':
                 result = operant[index-1] * operant[index]
             elif operator[index] == '/':

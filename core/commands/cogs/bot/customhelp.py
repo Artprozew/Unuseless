@@ -140,6 +140,9 @@ class Help(commands.Cog, name='Ajuda'):
 
     def cog_unload(self):
         self.bot.help_command = self._original_help_command
+        
+    def teardown(self):
+        self.bot.help_command = self._original_help_command
 
     def teardown(self):
         self.bot.help_command = self._original_help_command

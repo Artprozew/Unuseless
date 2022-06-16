@@ -146,6 +146,7 @@ class Owner(commands.Cog):
             await ctx.reply('Todos os Cogs foram recarregados!')
 
 
+
     @commands.command()
     @commands.is_owner()
     async def teste(self, ctx):
