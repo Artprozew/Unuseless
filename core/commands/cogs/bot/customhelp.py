@@ -4,6 +4,8 @@ import re
 import discord
 from discord.ext import commands
 from core import utils
+import unidecode
+import asyncio
 
 class CustomHelp(commands.HelpCommand):
     def get_command_signature(self, command): # This is a workaround because i couldn't implement this modifying the original Command.signature from Discord.py
@@ -36,18 +38,11 @@ class CustomHelp(commands.HelpCommand):
         embed.add_field(name='Grupos de comandos', value='\u200b', inline=False)
 
         for cog, command in mapping.items():
-            #cogs += f'{cog.qualified_name}'
             cmds = await self.filter_commands(command, sort=True)
             if len(cmds) == 0:
                 continue
             category = getattr(cog, 'qualified_name', 'Sem categoria')
             embed.add_field(name=category, value=f'{len(cmds)} {"comando" if len(cmds) == 1 else "comandos"}', inline=True)
-        '''for cog, command in mapping.items():
-            filtered = await self.filter_commands(command, sort=True)
-            cmd_signature = [self.get_command_signature(cmd) for cmd in filtered]
-            if cmd_signature:
-                category = getattr(cog, 'qualified_name', 'Sem categoria')
-                embed.add_field(name=category, value='\n'.join(cmd_signature), inline=True)'''
         
         channel = self.get_destination()
         await channel.send(embed=embed)
@@ -73,23 +68,24 @@ class CustomHelp(commands.HelpCommand):
             embed.add_field(name=':(', value='Esse comando não tem nenhuma informação registrada')
         message = await channel.send(embed=embed)
 
-        '''await message.add_reaction('❔')
+        await message.add_reaction('❔')
         check = utils.funcs.reaction_check(message, '❔')
         try:
-            reaction, user = await self.bot.wait_for('reaction_add', timeout=10.0, check=check)
-            await reaction.remove(self.bot.user)
-            embed.description = '
-            Legenda dos parâmetros:
-            `<argumento>` = Argumento necessário.
-            `[argumento]` = Argumento opcional.
-            `[--nome]` = Opcional, colocado no final da mensagem. Pode ser usado sozinho ou com mais argumentos caso necessário (Ex.: --nome Arthur). Geralmente pode ser usada alternativamente colocando apenas a sua inicial (Ex.: --n).
+            reaction, _ = await self.context.bot.wait_for('reaction_add', timeout=10.0, check=check)
+            await reaction.remove(self.context.bot.user)
+            embed = discord.Embed(title='Ajuda com sintaxe dos comandos', timestamp=datetime.datetime.utcnow(), description=
+            f'''**Legenda dos parâmetros**:
+            `<parâmetro>` = Argumento necessário.
+            `[parâmetro]` = Argumento opcional.
+            `[--nome]` = Opcional, colocado no final da mensagem. Pode ser usado sozinho ou com mais argumentos caso necessário (Ex.: --nome Arthur). Geralmente pode ser usado alternativamente colocando apenas as suas iniciais (Ex.: --n Arthur).
+            
             Lembrando que não é necessário colocar os argumentos entre <> ou [].
-            Exemplo de argumentos para o comando `repetir`: `>repetir Grapete repete --s`.
-            '
-            print(reaction, user)
+
+            Exemplo de argumentos para o comando `repetir`: `{self.clean_prefix}repetir Grapete repete --silent`. Esse comando com esses argumentos faz com que o bot repita "Grapete repete" apenas, e o parâmetro "--silent" faz com que o comando enviado seja apagado logo depois, ele não será mostrado na mensagem.''')
+            await message.reply(embed=embed)
         except asyncio.TimeoutError:
-            await message.remove_reaction('❔', self.bot.user)
-        return'''
+            await message.remove_reaction('❔', self.context.bot.user)
+        return
 
 
     async def send_cog_help(self, cog):
@@ -110,14 +106,17 @@ class CustomHelp(commands.HelpCommand):
         embed.add_field(name=group.qualified_name, value=commands, inline=False)
         channel = self.get_destination()
         await channel.send(embed=embed)
-        print(group)
-        print(dir(group))
-        print(type(group))
     
 
     async def send_error_message(self, error):
         tmp = re.match('No command called "(.+)" found', error)
         if tmp:
+            mapping = self.get_bot_mapping()
+            for cog, _ in mapping.items():
+                category = getattr(cog, 'qualified_name', 'Sem categoria')
+                if unidecode.unidecode(category).lower() == tmp.group(1).lower():
+                    await self.send_cog_help(cog)
+                    return
             error = f'Não achei um comando/grupo com o nome "{tmp.group(1)}".'
         embed = discord.Embed(title='Erro', description=str(error), timestamp=datetime.datetime.utcnow())
         channel = self.get_destination()
@@ -126,10 +125,11 @@ class CustomHelp(commands.HelpCommand):
 
 class Help(commands.Cog, name='Ajuda'):
     def __init__(self, bot):
+        self.bot = bot
         self._original_help_command = bot.help_command
         attributes = {
             'name': 'ajuda',
-            'aliases': ['ajudas', 'help', 'helps', 'commands', 'comandos'],
+            'aliases': ['help', 'commands', 'cmds', 'comandos'],
             'cooldown': commands.Cooldown(2, 5.0, commands.BucketType.user)
         }
         bot.help_command = CustomHelp(command_attrs=attributes)

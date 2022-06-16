@@ -26,7 +26,7 @@ import discord.ext.commands.converter
 from discord.ext.commands.converter import Greedy
 import typing
 from typing import Literal, Union
-from core.utils.option import Option
+from utils.option import Option
 import traceback
 
 def signature(command):

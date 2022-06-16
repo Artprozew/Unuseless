@@ -12,29 +12,34 @@ class colors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-def search_cogs_paths(*cogs, return_all_cogs: bool=False, directory='core/commands/cogs'):
+def search_cogs_paths(*cogs, return_all_cogs: bool=False, directory=None):
     """
     This function will search for the specified cog(s) in the cogs folder and will return
     its path(s). If return_all_cogs is set to True, it will return the paths of all cogs.
     The folder to search the cogs can also be specified.
 
-    Return: list (or string if only one cog is specified)
+    Return: list (string if only one cog is specified) (the list can be empty if nothing is found)
     NOTE: The paths returned will be in the format of dotted paths
     ------"""
 
     cogpaths = []
+    if not directory:
+        directory = os.path.dirname(os.path.dirname(__file__)) + r'\commands\cogs'
     for root, dirs, files in os.walk(directory):
-        dirs[:] = [dir for dir in dirs if not dir == '__pycache__']
+        dirs[:] = [direc for direc in dirs if not direc == '__pycache__']
+        root = root.replace(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '') # Remove everything before the main directory
+        while root.startswith('\\'):
+            root = root[1:]
         for file in files:
             if file.endswith('.py'):
                 if return_all_cogs:
-                    cogpaths.append(f'{root.replace("/", ".")}.{file[:-3]}')
+                    cogpaths.append('{}.{}'.format(root.replace('/', '.').replace('\\\\', '.').replace('\\', '.'), file[:-3]))
                 if cogs:
                     if file[:-3] in cogs:
                         if len(cogs) == 1 and not return_all_cogs:
-                            return f'{root.replace("/", ".")}.{file[:-3]}'
+                            return '{}.{}'.format(root.replace('/', '.').replace('\\\\', '.').replace('\\', '.'), file[:-3])
                         elif not len(cogs) == 1:
-                            cogpaths.append(f'{root.replace("/", ".")}.{file[:-3]})')
+                            cogpaths.append('{}.{}'.format(root.replace('/', '.').replace('\\\\', '.').replace('\\', '.'), file[:-3]))
     return cogpaths
 
 

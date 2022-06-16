@@ -104,9 +104,9 @@ class Fun(commands.Cog, name='Diversão'):
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def say(self, ctx, channel: typing.Optional[discord.TextChannel]=None, *, message: utils.option.OptionConverter, silent: utils.option.Option=False):
         if channel is None:
-            await ctx.send(message.content)
+            await ctx.send(message)
         else:
-            await channel.send(message.content)
+            await channel.send(message)
         if message.is_option('silent', 's'):
             await ctx.message.delete()
 
@@ -154,18 +154,13 @@ class Fun(commands.Cog, name='Diversão'):
     @commands.max_concurrency(1, commands.BucketType.guild)
     async def ejetar2(self, ctx, *, args): # Doesnt work for some reason
         msg = await ctx.channel.send('.')
-        impostor = random.randint(0, 1)
-        '''if impostor == 1:
-            args = args + ' was an Impostor'
-        else:
-            args = args + ' was not an Impostor'''
-        args = args + ' was an Impostor'#' was{}an Impostor'.format((random.randint(0, 1) and ' not ' or ' '))
+        args = args + ' was{}an Impostor'.format((random.randint(0, 1) and ' not ' or ' '))
         currmsg = ''
 
-        def randomstars(self, length):
+        def randomstars(length):
             star = ['.', '。', '•']
             caracters = ''
-            for i in range(length * 10):
+            for i in range(int(length * 5)):
                 caracter = ''
                 percentage = random.randint(0, 100)
                 if percentage <= 95: # percentage to get space instead of star
@@ -179,7 +174,7 @@ class Fun(commands.Cog, name='Diversão'):
         stars = [None]
         length = len(args)
         for i in range(1, 8):
-            stars.append(self.randomstars(length))
+            stars.append(randomstars(length))
         leftstars = list()
         rightstars = list()
         leftstars.append(stars[4][0:(int(len(stars[4]) / 2))])
@@ -190,7 +185,6 @@ class Fun(commands.Cog, name='Diversão'):
         mymsg2 = str(random.randint(1, 3)) + ' Impostor remains'
         length2 = int(length * 2)
         length3 = length2
-        print(f'{args!r}')
         for caracter in args:
             currmsg += caracter
             length2 -= 1
@@ -199,13 +193,9 @@ class Fun(commands.Cog, name='Diversão'):
             elif caracter == ' ':
                 continue
             else:
-                sendedmsg = sendedmsg.format('{}\n{}\n{}\n')
-                #sendedmsg = f'{stars[1]}\n{stars[2]}\n{stars[3]}\n{leftstars[0]:<{length2}}{currmsg:^{length2}}{rightstars[0]:>{length2}}\n{leftstars[1]:<{length3}}{" ":^{length3}}{rightstars[1]:>{length3}}\n{stars[6]}\n{stars[7]}'
-                print(sendedmsg)
-                #msg = msg
-                #print('1')
+                #sendedmsg = sendedmsg.format('{}\n{}\n{}\n')
+                sendedmsg = f'{stars[1]}\n{stars[2]}\n{stars[3]}\n{leftstars[0]:<{length2}}{currmsg:^{length2}}{rightstars[0]:>{length2}}\n{leftstars[1]:<{length3}}{" ":^{length3}}{rightstars[1]:>{length3}}\n{stars[6]}\n{stars[7]}'
                 await msg.edit(content=sendedmsg)
-                #print('2')
                 await asyncio.sleep(0.7)
             
         sendedmsg = sendedmsg.split('\n')

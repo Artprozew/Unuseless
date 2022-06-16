@@ -2,10 +2,12 @@ import time
 import datetime
 import sys
 import os
+import textwrap
 import discord
 from discord.ext import commands
 import psutil
 import humanize
+import pytz
 
 class Bot(commands.Cog):
     def __init__(self, bot):
@@ -20,10 +22,6 @@ class Bot(commands.Cog):
             guild_count += 1
             member_count += int(guild.member_count)
         end = time.time()
-        #e = int(time.time() - start_time)
-        #print('{:02d}:{:02d}:{:02d}'.format(e // 3600, (e % 3600 // 60), e % 60))
-        #elapsed_time = time.time() - start_time
-        #time.strftime('%H:%M:%S', time.gmtime(elapsed_time))
         uptime = int(self.bot.uptime)
         hours, rem = divmod(end - uptime, 3600)
         minutes, seconds = divmod(rem, 60)
@@ -33,7 +31,7 @@ class Bot(commands.Cog):
         message = await ctx.reply(embed=embed)
         ping = (time.perf_counter() - pingtime) * 1000
         cmds = 0
-        for command in self.bot.walk_commands():
+        for _ in self.bot.walk_commands():
             cmds += 1
         process = psutil.Process(os.getpid())
         cpu_usage = psutil.cpu_percent()
@@ -45,6 +43,9 @@ class Bot(commands.Cog):
         process_uptime = time.time() - process.create_time()
         process_pid = process.pid
         embed = discord.Embed(timestamp=datetime.datetime.utcnow())
+        host = 'Repl.it'
+        if os.name == 'nt':
+            host = 'Local'
         embed.add_field(name='__Informações do bot__', value='\u200b', inline=False)
         embed.add_field(name='Nome', value=self.bot.user.name)
         embed.add_field(name='Discord Tag', value=f'#{self.bot.user.discriminator}')
@@ -56,19 +57,18 @@ class Bot(commands.Cog):
         embed.add_field(name='Total de comandos', value=cmds)
         embed.add_field(name='Link de convite do bot', value='[Clique aqui](https://discord.com/api/oauth2/authorize?client_id=843698163785269298&permissions=4228381815&scope=bot)')
         embed.add_field(name='\u200b', value='\u200b', inline=False)
-        embed.add_field(name='__Informações para nerds__', value=f'''
-```yaml
-Linguagem de programação: Python ({sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro})
-Biblioteca: Discord.py ({discord.__version__})
-Websocket Ping: {int(self.bot.latency * 1000)} ms
-Typing Ping: {int(ping)} ms
-Hosting: Repl.it (Free hosting)
-Uso de CPU: {cpu_usage}%
-Cores/Threads: {cpu_cores} / {cpu_threads}
-RAM: {used_ram} / {total_ram} (Process: {process_used_ram})
-Process PID: {process_pid}
-Process Uptime: {process_uptime}```
-        ''', inline=False)
+        embed.add_field(name='__Informações para nerds__', value=textwrap.dedent(f'''
+        ```yaml
+        Linguagem de programação: Python ({sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro})
+        Biblioteca: Discord.py ({discord.__version__})
+        Websocket Ping: {int(self.bot.latency * 1000)} ms
+        Typing Ping: {int(ping)} ms
+        Hosting: {host} (Free hosting)
+        Uso de CPU: {cpu_usage}%
+        Cores/Threads: {cpu_cores} / {cpu_threads}
+        RAM: {used_ram} / {total_ram} (Process: {process_used_ram})
+        Process PID: {process_pid}
+        Process Uptime: {process_uptime}```'''), inline=False)
         '''embed.add_field(name='Link de convite', value='[Convite do bot](https://discord.com/api/oauth2/authorize?client_id=843698163785269298&permissions=4228381815&scope=bot)', inline=True)
         embed.add_field(name='Python',  value=f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} <:python:850174248663384075>')
         embed.add_field(name='Library', value=f'Discord.py {discord.__version__} <:dpylogo:850199786241654834>\n', inline=True)
@@ -98,10 +98,18 @@ Process Uptime: {process_uptime}```
     async def changelog(self, ctx):
         channel = self.bot.get_guild(850168576287178843).get_channel(862857795136651264)
         logs = []
-        async for message in channel.history(limit=10, oldest_first=True):
-            logs.append(message.content)
-        logs = '\n'.join(logs)
-        await ctx.reply(logs)
+        async for message in channel.history(limit=6, oldest_first=True):
+            logs.append((message.content, message.created_at))
+        #logs = '\n'.join(logs)
+        embed = discord.Embed(timestamp=datetime.datetime.utcnow())
+        embed.add_field(name='__Bot changelog__', value='\u200b', inline=False)
+        for log in logs:
+            logtime = log[1].replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Brazil/East'))
+            embed.add_field(name=logtime.strftime('%d/%m/%y %H:%M'), value=f'**↳** {log[0]}', inline=True)
+        #embed.add_field(name='\u200b', value='\u200b', inline=False)
+        embed.set_footer(text='Brazil/East timezone')
+        #embed.set_footer(text='More: <link to server in #changelogs>')
+        await ctx.reply(embed=embed)
         
 
     @commands.command(aliases=['convite', 'convidar'])
@@ -113,11 +121,9 @@ Process Uptime: {process_uptime}```
     @commands.command(aliases=['tempo_online', 'tempoonline'])
     async def uptime(self, ctx):
         uptime = int(self.bot.uptime)
-        end = time.time()
-        hours, rem = divmod(end - uptime, 3600)
-        minutes, seconds = divmod(rem, 60)
-        elapsed = '{:0>2}:{:0>2}:{:0>2.0f}'.format(int(hours), int(minutes), seconds)
-        embed = discord.Embed()
+        elapsed = datetime.datetime.now() - datetime.datetime.fromtimestamp(uptime)
+        elapsed = str(datetime.timedelta(seconds=elapsed.seconds))
+        embed = discord.Embed(timestamp=datetime.datetime.utcnow())
         embed.add_field(name='Online', value=f'<t:{uptime}:R> (<t:{uptime}:f> ({elapsed}))')
         await ctx.reply(embed=embed)
 
