@@ -20,21 +20,20 @@ class Utilidades(commands.Cog):
         self.bot = bot
 
 
-    @commands.command(aliases=['format', 'code', 'beautify'])
-    async def source(self, ctx, red: typing.Optional[int]=0, green: typing.Optional[int]=0, blue: typing.Optional[int]=0, alpha: typing.Optional[int]=255, *, code: utils.option.OptionConverter, theme: utils.option.Option='dracula', language: utils.option.Option='python'):
+    @commands.command(aliases=['format', 'code', 'beautify', 'source'])
+    async def codigo(self, ctx, red: typing.Optional[int]=0, green: typing.Optional[int]=0, blue: typing.Optional[int]=0, alpha: typing.Optional[int]=255, *, code: utils.option.OptionConverter, theme: utils.option.Option='dracula', language: utils.option.Option='python'):
         theme = code.is_option('theme', 't')
-        theme = theme if theme else 'dracula'
+        theme = theme if theme and theme is not True else 'dracula'
         language = code.is_option('language', 'l')
-        language2 = language
-        if code.startswith('```'):
-            tmp = code.split()
-            if tmp[0][3:]:
-                language = tmp[0][3:]
-            code = code[3 + len(language):]
-            if code.endswith('```'):
-                code = code[:-3]
-        language = language2 if language2 else language
-        language = language if language else 'python'
+        if not language or language is True:
+            if code.startswith('```'):
+                tmp = code.split()
+                if tmp[0][3:]:
+                    language = tmp[0][3:]
+                code = code[3 + len(language):]
+                if code.endswith('```'):
+                    code = code[:-3]
+        language = language if language and language is not True else 'python'
         payload = {
             "code": urllib.parse.quote(code),
             "backgroundColor": f"rgba({red}, {green}, {blue}, {alpha})",
