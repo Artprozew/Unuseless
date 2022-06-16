@@ -32,13 +32,5 @@ class Random(commands.Cog, name='Aleatórios'):
     async def gusta(self, ctx, *, text):
         await ctx.reply(', '.join(text.split(',')))
 
-    @commands.command(aliases=['reversetext', 'reverse', 'inverter', 'inverter_texto', 'invertertexto'])
-    async def reverse_text(self, ctx, *, text):
-        await ctx.reply(text[::-1])
-
-    @commands.command()
-    async def gusta(self, ctx, *, text):
-        await ctx.reply(', '.join(text.split(',')))
-
 def setup(bot):
     bot.add_cog(Random(bot))
