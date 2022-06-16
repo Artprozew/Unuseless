@@ -2,9 +2,9 @@ import asyncio
 import random
 import time
 import typing
+
 import discord
 from discord.ext import commands
-from core import utils
 
 from core import utils # pylint: disable=import-error
 
