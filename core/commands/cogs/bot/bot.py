@@ -3,11 +3,13 @@ import datetime
 import sys
 import os
 import textwrap
+
 import discord
 from discord.ext import commands
 import psutil
 import humanize
 import pytz
+
 
 class Bot(commands.Cog):
     def __init__(self, bot):
@@ -25,7 +27,7 @@ class Bot(commands.Cog):
         uptime = int(self.bot.uptime)
         hours, rem = divmod(end - uptime, 3600)
         minutes, seconds = divmod(rem, 60)
-        elapsed = '{:0>2}:{:0>2}:{:0>2.0f}'.format(int(hours), int(minutes), seconds)
+        elapsed = f'{int(hours):0>2}:{int(minutes):0>2}:{seconds:0>2.0f}'
         pingtime = time.perf_counter()
         embed = discord.Embed(title='Medindo o ping...')
         message = await ctx.reply(embed=embed)
@@ -59,8 +61,8 @@ class Bot(commands.Cog):
         embed.add_field(name='\u200b', value='\u200b', inline=False)
         embed.add_field(name='__Informações para nerds__', value=textwrap.dedent(f'''
         ```yaml
-        Linguagem de programação: Python ({sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro})
-        Biblioteca: Discord.py ({discord.__version__})
+        Linguagem: Python ({sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro})
+        Library: Discord.py ({discord.__version__})
         Websocket Ping: {int(self.bot.latency * 1000)} ms
         Typing Ping: {int(ping)} ms
         Hosting: {host} (Free hosting)
@@ -69,14 +71,6 @@ class Bot(commands.Cog):
         RAM: {used_ram} / {total_ram} (Process: {process_used_ram})
         Process PID: {process_pid}
         Process Uptime: {process_uptime}```'''), inline=False)
-        '''embed.add_field(name='Link de convite', value='[Convite do bot](https://discord.com/api/oauth2/authorize?client_id=843698163785269298&permissions=4228381815&scope=bot)', inline=True)
-        embed.add_field(name='Python',  value=f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} <:python:850174248663384075>')
-        embed.add_field(name='Library', value=f'Discord.py {discord.__version__} <:dpylogo:850199786241654834>\n', inline=True)
-        embed.add_field(name='Desenvolvedor', value=self.bot.appinfo.owner.mention, inline=True)
-        embed.add_field(name='Online desde', value=f'<t:{int(self.bot.uptime)}:F>', inline=True)
-        embed.add_field(name='Online há', value=f'<t:{int(self.bot.uptime)}:R> ({elapsed})', inline=True)
-        embed.add_field(name='Servidores', value=guild_count, inline=True)
-        embed.add_field(name='Usuários', value=member_count, inline=True)'''
         #embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar_url)
         embed.set_thumbnail(url=self.bot.user.avatar_url)
         #embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
@@ -110,7 +104,7 @@ class Bot(commands.Cog):
         embed.set_footer(text='Brazil/East timezone')
         #embed.set_footer(text='More: <link to server in #changelogs>')
         await ctx.reply(embed=embed)
-        
+
 
     @commands.command(aliases=['convite', 'convidar'])
     async def invite(self, ctx):
@@ -126,6 +120,7 @@ class Bot(commands.Cog):
         embed = discord.Embed(timestamp=datetime.datetime.utcnow())
         embed.add_field(name='Online', value=f'<t:{uptime}:R> (<t:{uptime}:f> ({elapsed}))')
         await ctx.reply(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Bot(bot))

@@ -2,9 +2,12 @@ import asyncio
 import random
 import time
 import typing
+
 import discord
 from discord.ext import commands
-from core import utils
+
+from core import utils # pylint: disable=import-error
+
 
 class Fun(commands.Cog, name='Diversão'):
     def __init__(self, bot):
@@ -18,9 +21,7 @@ class Fun(commands.Cog, name='Diversão'):
         if racers:
             racers = racers.split(', ')
             if len(racers) <= 1:
-                await ctx.reply(f'{racers[0]} não pode correr sozinho')
-                return
-        race = True
+                return await ctx.reply(f'{racers[0]} não pode correr sozinho')
         participants = []
         await ctx.channel.send('INICIANDO A CORRIDA! 🚦')
         await asyncio.sleep(3)
@@ -31,7 +32,7 @@ class Fun(commands.Cog, name='Diversão'):
         await ctx.channel.send('1')
         await asyncio.sleep(1)
         await ctx.channel.send('VAAAAAII!!!!')
-        
+
         async def ShowRanking(participants):
             if participants:
                 random.shuffle(participants)
@@ -54,47 +55,52 @@ class Fun(commands.Cog, name='Diversão'):
         else:
             def check(message):
                 msg = message.content.lower()
-                if 'run' in msg or 'corre' in msg:
+                if any(i in msg for i in ('run', 'sprint', 'corre')):
                     if message.channel == ctx.channel:
                         return True
                 return False
-            try:
-                timer = time.time() - 20
-                while race:
-                    timer2 = time.time()
-                    if timer2 == timer:
-                        race = False
-                        break
-                    message = await self.bot.wait_for('message', check=check, timeout=10.0)
-                    if not message.author.mention in participants and not message.author.discriminator == '0000':
-                        participants.append(message.author.mention)
-                if participants:
-                    await ShowRanking(participants)
-            except asyncio.TimeoutError:
-                if not participants:
-                    await ctx.channel.send('Ninguém participou da corrida')
-                if participants:
-                    await ShowRanking(participants)
+
+            async def waitRace():
+                try:
+                    timer = time.time() + 20
+                    while True:
+                        timer2 = time.time()
+                        if timer2 >= timer:
+                            break
+                        message = await self.bot.wait_for('message', check=check, timeout=20.0)
+                        if not message.author.mention in participants and not message.author.discriminator == '0000':
+                            participants.append(message.author.mention)
+                    if participants:
+                        await ShowRanking(participants)
+                except asyncio.TimeoutError:
+                    if not participants:
+                        await ctx.channel.send('Ninguém participou da corrida')
+                    if participants:
+                        await ShowRanking(participants)
+
+            asyncio.run_coroutine_threadsafe(waitRace(), self.bot.loop)
 
 
-    @commands.command(aliases=['boladecristal', 'bola_de_cristal', '8ball'])
+    @commands.command(aliases=['8ball', 'bolamagica', 'bola_magica', 'magicball', 'magic_ball'])
     async def ball8(self, ctx, *, message):
         if not message.endswith('?'):
             return await ctx.reply('Você não me fez nenhuma pergunta :thinking:')
         answers = (
             'Mas é claro.',
-            'Com toda certeza.',
+            'Mas é claro que não.',
+            'Com certeza.',
+            'Com certeza não.',
             'Eu acredito que sim.',
             'Eu acredito que não.',
             'Talvez.',
             'Provavelmente sim.',
             'Provavelmente não.',
         )
-        random_answer = random.randint(0, len(answers) - 1)
-        if not random_answer == 0 and not random_answer == 1:
-            await ctx.reply('Estou pensando...')
-            await asyncio.sleep(random.randint(2, 10))
-        await ctx.reply(answers[random_answer])
+        answer = random.randint(0, len(answers) - 1)
+        if not any(i == answer for i in (0, 1, 2, 3)):
+            await ctx.reply(random.choice(('Estou pensando...', 'Hmmmmm...', 'Deixe-me pensar...')))
+            await asyncio.sleep(random.randint(2, 7))
+        await ctx.reply(answers[answer])
 
 
     @commands.command(
@@ -114,45 +120,6 @@ class Fun(commands.Cog, name='Diversão'):
     @commands.command()
     @commands.max_concurrency(1, commands.BucketType.guild)
     async def ejetar(self, ctx, *, args):
-        msg = await ctx.channel.send('.')
-        args = args + ' was{}an Impostor'.format((random.randint(0, 1) and ' not ' or ' '))
-        currmsg = ''
-        sendedmsg = ''
-        for caracter in args:
-            currmsg += caracter
-            if caracter == '\\':
-                continue
-            elif caracter == ' ':
-                continue
-            else:
-                sendedmsg = '. 　　　。　　　　•　 　ﾟ　　。 　　.              。\n \
-    　　　.　　　 　　.　　　　　。　　 。　. 　       .          •      。\n \
-    .　　 。　　　　　 ඞ 。 . 　　 • 　　  . 　•                。\n \
-    　　ﾟ　　  {:^20}\n \
-    　　　　　      {:^20} 　 　　 \n \
-    　　ﾟ　　　.　　  •　. 　　　　.　 .           •   。         .        。'.format(currmsg, ' ')
-                await msg.edit(content=sendedmsg)
-                await asyncio.sleep(0.7)
-            
-        args = str(random.randint(1, 3)) + ' Impostor remains'
-        sendedmsg = sendedmsg.split('\n')
-        del sendedmsg[4]
-        del sendedmsg[4]
-        sendedmsg = '\n'.join(sendedmsg)
-        currmsg = ''
-        for caracter in args:
-            currmsg += caracter
-            if caracter == ' ':
-                continue
-            else:
-                await msg.edit(content=sendedmsg + '\n　　　　　        {:20} 　 　　 \n \
-    　　ﾟ　　　.　　  •　. 　　　　.　 .           •   。         .        。'.format(currmsg))
-                await asyncio.sleep(0.7)
-
-
-    @commands.command()
-    @commands.max_concurrency(1, commands.BucketType.guild)
-    async def ejetar2(self, ctx, *, args): # Doesnt work for some reason
         msg = await ctx.channel.send('.')
         args = args + ' was{}an Impostor'.format((random.randint(0, 1) and ' not ' or ' '))
         currmsg = ''
@@ -197,7 +164,7 @@ class Fun(commands.Cog, name='Diversão'):
                 sendedmsg = f'{stars[1]}\n{stars[2]}\n{stars[3]}\n{leftstars[0]:<{length2}}{currmsg:^{length2}}{rightstars[0]:>{length2}}\n{leftstars[1]:<{length3}}{" ":^{length3}}{rightstars[1]:>{length3}}\n{stars[6]}\n{stars[7]}'
                 await msg.edit(content=sendedmsg)
                 await asyncio.sleep(0.7)
-            
+
         sendedmsg = sendedmsg.split('\n')
         del sendedmsg[4]
         del sendedmsg[4]

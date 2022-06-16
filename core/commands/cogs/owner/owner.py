@@ -4,9 +4,11 @@ import io
 import contextlib
 import asyncio
 import copy
+import os
+
 from discord.ext import commands
-import utils
-print(utils.funcs.search_cogs_paths(return_all_cogs=True))
+
+from core import utils # pylint: disable=import-error
 
 
 async def cog_handler(ctx, bot, mode, cog):
@@ -15,45 +17,42 @@ async def cog_handler(ctx, bot, mode, cog):
         if not cog:
             return 'Cog não encontrado'
         return await cog_handler(ctx, bot, mode, cog)
-    else:
-        try:
-            if mode == 'reload':
-                bot.reload_extension(cog)
-                return f'Cog `{cog}` recarregado!'
-            elif mode == 'load':
-                bot.load_extension(cog)
-                return f'Cog `{cog}` carregado!'
-            elif mode == 'unload':
-                bot.unload_extension(cog)
-                return f'Cog `{cog}` descarregado!'
-        except commands.ExtensionNotFound:
-            return f'Cog `{cog}` não encontrado'
-        except commands.ExtensionNotLoaded:
-            return 'O cog ainda não foi carregado'
-        except commands.ExtensionAlreadyLoaded:
-            return 'O cog já está carregado'
-        #except (commands.ExtensionError, commands.ExtensionFailed):
-            #return 'Falha'
-        except Exception:
-            exc_type, exc_value, _ = sys.exc_info()
-            exc = traceback.format_exception_only(exc_type, exc_value)
-            exc = ' '.join(exc)
-            if '```' in exc:
-                exc = exc.replace('```', '')
-            return f'Exception: ```py\n{exc}```'
+
+    try:
+        if mode == 'reload':
+            bot.reload_extension(cog)
+            return f'Cog `{cog}` recarregado!'
+        elif mode == 'load':
+            bot.load_extension(cog)
+            return f'Cog `{cog}` carregado!'
+        elif mode == 'unload':
+            bot.unload_extension(cog)
+            return f'Cog `{cog}` descarregado!'
+        else:
+            raise RuntimeWarning(f"No mode of handling cog '{cog}' was chosen")
+    except commands.ExtensionNotFound:
+        return f'Cog `{cog}` não encontrado'
+    except commands.ExtensionNotLoaded:
+        return 'O cog ainda não foi carregado'
+    except commands.ExtensionAlreadyLoaded:
+        return 'O cog já está carregado'
+    except (commands.ExtensionError, commands.ExtensionFailed) as exc:
+        exc_type, _, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        return f'Falha ao recarregar a extensão {cog}:\n```{exc} ({exc_type} {fname}:{exc_tb.tb_lineno})```'
 
 
 class Owner(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-    
-    async def cog_check(self, ctx):
-        return await self.bot.is_owner(ctx.author)
+
+    def cog_check(self, ctx):
+        return asyncio.run(self.bot.is_owner(ctx.author))
 
 
     @commands.command(aliases=['l'])
     @commands.is_owner()
-    async def last(self, ctx, max: int=1, limit: int=25):
+    async def last(self, ctx, max_msgs: int=1, limit: int=25):
         last_msgs = []
         bot_prefix = await self.bot.get_prefix(ctx.message)
         async for message in ctx.channel.history(limit=limit):
@@ -66,16 +65,15 @@ class Owner(commands.Cog):
                                 this_cmd = True
                     if not this_cmd:
                         last_msgs.append(message)
-            if len(last_msgs) == max:
+            if len(last_msgs) == max_msgs:
                 break
-
 
         for i in last_msgs:
             msg = copy.copy(i)
             msg._update({'content': i.content}) # pylint: disable=protected-access
             ctx2 = await ctx.bot.get_context(msg, cls=type(ctx))
             await ctx2.command.reinvoke(ctx2)
-                     
+
 
     @commands.command(aliases=['turn_off', 'turnoff'])
     @commands.is_owner()
@@ -91,7 +89,7 @@ class Owner(commands.Cog):
                     await ctx.reply('Bot desligado 💀')
                     await reaction.remove(self.bot.user)
                     await self.bot.close()
-                    quit()
+                    sys.exit()
                 except asyncio.TimeoutError:
                     await msg.remove_reaction('✅', self.bot.user)
         else:
@@ -103,7 +101,7 @@ class Owner(commands.Cog):
                 await ctx.reply('Bot desligado 💀')
                 await reaction.remove(self.bot.user)
                 await self.bot.close()
-                quit()
+                sys.exit()
             except asyncio.TimeoutError:
                 await msg.remove_reaction('✅', self.bot.user)
 
@@ -125,11 +123,11 @@ class Owner(commands.Cog):
     async def reload_cog(self, ctx, cog):
         await ctx.reply(await cog_handler(ctx, self.bot, 'reload', cog))
 
-    
+
     @commands.command(aliases=['reloadallcogs', 'rall'])
     @commands.is_owner()
     async def reload_all_cogs(self, ctx, *, args: utils.option.OptionConverter=None, prevent_load: utils.option.Option=None):
-        if args != None:
+        if args is not None:
             prevent_load = args.is_option('prevent_load', 'pl', 'p')
         cogs = utils.funcs.search_cogs_paths(return_all_cogs=True)
         failed = False
@@ -140,10 +138,12 @@ class Owner(commands.Cog):
                 if not prevent_load:
                     self.bot.load_extension(cog)
             except (commands.ExtensionFailed, commands.ExtensionError) as exc:
-                await ctx.reply(f'Falha ao recarregar a extensão {cog}\n```{exc}```')
+                exc_type, _, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                await ctx.reply(f'Falha ao recarregar a extensão {cog}:\n```{exc} ({exc_type} {fname}:{exc_tb.tb_lineno})```')
                 failed = True
         if not failed:
-            await ctx.reply(f'Todos os Cogs foram recarregados!')
+            await ctx.reply('Todos os Cogs foram recarregados!')
 
 
     @commands.command()
@@ -175,11 +175,8 @@ class Owner(commands.Cog):
         if len(name) >= 32:
             await ctx.reply('O nome não pode ter mais de 32 caracteres')
         else:
-            try:
-                await self.bot.user.edit(username=name)
-                await ctx.reply('Novo nome: ' + name)
-            except Exception as exc:
-                await ctx.reply(exc)
+            await self.bot.user.edit(username=name)
+            await ctx.reply('Novo nome: ' + name)
 
 
     @commands.command(aliases=['eval'])
@@ -189,10 +186,10 @@ class Owner(commands.Cog):
         args = utils.funcs.remove_formattation(args)
         try:
             if awaitfirst:
-                await ctx.reply(await eval(args))
+                await ctx.reply(await eval(args)) # pylint: disable=eval-used
             else:
-                await ctx.reply(eval(args))
-        except Exception as exc:
+                await ctx.reply(eval(args)) # pylint: disable=eval-used
+        except Exception: # pylint: disable=broad-except
             exc_type, exc_value, _ = sys.exc_info()
             #exc = traceback.format_exc(chain=False)
             if exc_type.__name__ == 'HTTPException':
@@ -214,7 +211,7 @@ class Owner(commands.Cog):
         try:
             result = io.StringIO()
             with contextlib.redirect_stdout(result), contextlib.redirect_stderr(result):
-                exec(f'async def __ex(self, ctx): ' + ''.join(f'\n {line}' for line in args.split('\n')))
+                exec('async def __ex(self, ctx): ' + ''.join(f'\n {line}' for line in args.split('\n'))) # pylint: disable=exec-used
                 await locals()['__ex'](self, ctx)
             result = result.getvalue()
             if result:
@@ -226,10 +223,8 @@ class Owner(commands.Cog):
                     await ctx.reply(f'Resultado: ```py\n{result}```')
             else:
                 await ctx.message.add_reaction('🔇')
-        except Exception:
+        except Exception: # pylint: disable=broad-except
             exc_type, exc_value, _ = sys.exc_info()
-            idk = traceback.format_exc()
-            print(idk)
             if exc_type.__name__ == 'HTTPException':
                 await ctx.message.add_reaction('🔇')
             else:

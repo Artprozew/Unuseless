@@ -1,11 +1,13 @@
 import datetime
 import typing
 import re
+import asyncio
+
 import discord
 from discord.ext import commands
-from core import utils
 import unidecode
-import asyncio
+
+from core import utils # pylint: disable=import-error
 
 class CustomHelp(commands.HelpCommand):
     def get_command_signature(self, command): # This is a workaround because i couldn't implement this modifying the original Command.signature from Discord.py
@@ -17,7 +19,7 @@ class CustomHelp(commands.HelpCommand):
         for name, key, param in zip(command.signature.split(), command.clean_params.keys(), command.clean_params.values()):
             if param.annotation:
                 if getattr(param.annotation, '_name', False) == 'Option' or getattr(param.annotation, '__name__', False) == 'Option':
-                        signature += f'[--{key}] '
+                    signature += f'[--{key}] '
                 else:
                     for paramtype in typing.get_args(param.annotation):
                         if getattr(paramtype, '__name__', False) == 'Option':
@@ -43,18 +45,18 @@ class CustomHelp(commands.HelpCommand):
                 continue
             category = getattr(cog, 'qualified_name', 'Sem categoria')
             embed.add_field(name=category, value=f'{len(cmds)} {"comando" if len(cmds) == 1 else "comandos"}', inline=True)
-        
+
         channel = self.get_destination()
         await channel.send(embed=embed)
 
 
     async def send_command_help(self, command):
         embed = discord.Embed(title=self.get_command_signature(command), timestamp=datetime.datetime.utcnow())
-        help = command.help
+        helpmsg = command.help
         brief = command.brief
         alias = command.aliases
         usage = command.usage
-        if help:
+        if helpmsg:
             embed.add_field(name='Ajuda', value=help, inline=False)
         if brief:
             embed.add_field(name='Descrição', value=brief, inline=False)
@@ -64,7 +66,7 @@ class CustomHelp(commands.HelpCommand):
             embed.add_field(name='Outros nomes dado à esse comando', value=', '.join(alias), inline=False)
 
         channel = self.get_destination()
-        if not help and not alias and not usage and not brief:
+        if not helpmsg and not alias and not usage and not brief:
             embed.add_field(name=':(', value='Esse comando não tem nenhuma informação registrada')
         message = await channel.send(embed=embed)
 
@@ -78,7 +80,7 @@ class CustomHelp(commands.HelpCommand):
             `<parâmetro>` = Argumento necessário.
             `[parâmetro]` = Argumento opcional.
             `[--nome]` = Opcional, colocado no final da mensagem. Pode ser usado sozinho ou com mais argumentos caso necessário (Ex.: --nome Arthur). Geralmente pode ser usado alternativamente colocando apenas as suas iniciais (Ex.: --n Arthur).
-            
+
             Lembrando que não é necessário colocar os argumentos entre <> ou [].
 
             Exemplo de argumentos para o comando `repetir`: `{self.clean_prefix}repetir Grapete repete --silent`. Esse comando com esses argumentos faz com que o bot repita "Grapete repete" apenas, e o parâmetro "--silent" faz com que o comando enviado seja apagado logo depois, ele não será mostrado na mensagem.''')
@@ -90,23 +92,23 @@ class CustomHelp(commands.HelpCommand):
 
     async def send_cog_help(self, cog):
         embed = discord.Embed(title=f'Ajuda com Grupo: {cog.qualified_name}', description='Comandos do grupo de comandos', timestamp=datetime.datetime.utcnow())
-        commands = ''
+        cmds = ''
         for command in cog.walk_commands():
-            commands += f'{self.get_command_signature(command)}\n'
-        embed.add_field(name=cog.qualified_name, value=commands, inline=False)
+            cmds += f'{self.get_command_signature(command)}\n'
+        embed.add_field(name=cog.qualified_name, value=cmds, inline=False)
         channel = self.get_destination()
         await channel.send(embed=embed)
-    
+
 
     async def send_group_help(self, group):
         embed = discord.Embed(title=f'Ajuda com Grupo: {group.qualified_name}', description='Comandos do grupo de comandos', timestamp=datetime.datetime.utcnow())
-        commands = ''
+        cmds = ''
         for command in group.walk_commands():
-            commands += f'{self.get_command_signature(command)}\n'
-        embed.add_field(name=group.qualified_name, value=commands, inline=False)
+            cmds += f'{self.get_command_signature(command)}\n'
+        embed.add_field(name=group.qualified_name, value=cmds, inline=False)
         channel = self.get_destination()
         await channel.send(embed=embed)
-    
+
 
     async def send_error_message(self, error):
         tmp = re.match('No command called "(.+)" found', error)
@@ -121,7 +123,7 @@ class CustomHelp(commands.HelpCommand):
         embed = discord.Embed(title='Erro', description=str(error), timestamp=datetime.datetime.utcnow())
         channel = self.get_destination()
         await channel.send(embed=embed)
-            
+
 
 class Help(commands.Cog, name='Ajuda'):
     def __init__(self, bot):
@@ -129,7 +131,7 @@ class Help(commands.Cog, name='Ajuda'):
         self._original_help_command = bot.help_command
         attributes = {
             'name': 'ajuda',
-            'aliases': ['help', 'commands', 'cmds', 'comandos'],
+            'aliases': ['help', 'commands', 'cmds', 'cmd', 'comandos', 'comando'],
             'cooldown': commands.Cooldown(2, 5.0, commands.BucketType.user)
         }
         bot.help_command = CustomHelp(command_attrs=attributes)
@@ -138,7 +140,7 @@ class Help(commands.Cog, name='Ajuda'):
 
     def cog_unload(self):
         self.bot.help_command = self._original_help_command
-        
+
     def teardown(self):
         self.bot.help_command = self._original_help_command
 

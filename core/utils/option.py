@@ -1,11 +1,10 @@
-''''''
 import shlex
 from discord.ext import commands
 
 
 class Option():
     pass
-    
+
 
 class OptionConverter(commands.Converter):
     async def convert(self, ctx, argument):
@@ -47,12 +46,15 @@ class OptionParam(str): # Still needs some improvements?
         for key, value in zip(option, option[1:]+['--']):
             key = key.lower()
             if key.startswith('-'):
-                self.options[key.strip('-')] = True if value.startswith('-') else value
-                self.content = self.content.replace(key, '')
+                if value.startswith('-'):
+                    self.options[key.strip('-')] = True
+                elif value.startswith('"') and value.endswith('"'):
+                    self.options[key.strip('-')] = value[1:-1]
+                else:
+                    self.options[key.strip('-')] = value
+                self.content = self.content.replace(' ' + key, '')
                 if not value.startswith('-'):
-                    self.content = self.content.replace(value, '')
-        if self.content.endswith(' '):
-            self.content = self.content[:-1]
+                    self.content = self.content.replace(' ' + value, '')
 
 
     def is_option(self, *option):

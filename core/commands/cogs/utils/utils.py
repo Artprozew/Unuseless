@@ -1,15 +1,18 @@
 import datetime
+import io
+import urllib
+import typing
+import re
+import imghdr
+
 import discord
 from discord.ext import commands
 import aiohttp
-import typing
-import utils
-import re
-import imghdr
 import base64
 import pytz
-import io
-import urllib
+import unidecode
+
+from core import utils # pylint: disable=import-error
 
 
 class Utilidades(commands.Cog):
@@ -22,16 +25,16 @@ class Utilidades(commands.Cog):
         theme = code.is_option('theme', 't')
         theme = theme if theme else 'dracula'
         language = code.is_option('language', 'l')
-        language = language if language else 'python'
+        language2 = language
         if code.startswith('```'):
             tmp = code.split()
             if tmp[0][3:]:
                 language = tmp[0][3:]
-                if language == 'py':
-                    language = 'python'
             code = code[3 + len(language):]
             if code.endswith('```'):
                 code = code[:-3]
+        language = language2 if language2 else language
+        language = language if language else 'python'
         payload = {
             "code": urllib.parse.quote(code),
             "backgroundColor": f"rgba({red}, {green}, {blue}, {alpha})",
@@ -45,65 +48,161 @@ class Utilidades(commands.Cog):
 
 
     @commands.command(aliases=['activity', 'presence'])
-    async def atividade(self, ctx, user: typing.Optional[discord.User], page: typing.Optional[int]):
+    async def atividade(self, ctx, user: typing.Optional[discord.User], page: typing.Optional[int]=0, *, name: typing.Optional[str]=None):
+        activity = None
         if user:
-            member = ctx.guild.get_member(user.id)
-            if not member:
+            user = ctx.guild.get_member(user.id)
+            if not user:
                 return await ctx.reply('Não consegui achar esse usuário')
-            activity = member.activities
+            activity = user.activities
             if not activity:
                 return await ctx.reply('Parece que esse usuário não está com nenhuma atividade no status')
         else:
-            activity = ctx.guild.get_member(ctx.message.author.id).activities
+            user = ctx.message.author
+            activity = user.activities
             if not activity:
                 return await ctx.reply('Parece que você não está com nenhuma atividade no status')
-        if not page:
-            activity = activity[0]
+
+        non_custom = [activ for activ in activity if not activ.type == discord.ActivityType.custom]
+        if name:
+            for activ in non_custom:
+                activ_name = getattr(activ, 'name', None)
+                if activ_name:
+                    if name.lower() == activ_name.lower():
+                        activity = activ
+                        break
+            else:
+                return await ctx.reply('Eu não consegui achar uma atividade com esse nome')
         else:
             page = page - 1
-            if page >= len(activity):
-                page = len(activity) - 1
+            if page >= len(non_custom):
+                page = len(non_custom) - 1
             if page < 0:
                 page = 0
-            activity = activity[page]
-        if activity:
-            embed = discord.Embed(timestamp=datetime.datetime.utcnow())
-            if activity.type == discord.ActivityType.listening:
-                embed.add_field(name='Título', value=activity.title, inline=False)
-                embed.add_field(name='Artista', value=activity.artist, inline=False)
-                embed.add_field(name='Álbum', value=activity.album, inline=False)
-                embed.set_thumbnail(url=activity.album_cover_url)
-            elif activity.type == discord.ActivityType.custom:
-                embed.add_field(name='Nome', value=activity.name, inline=False)
-            #elif activity.type == discord.ActivityType.streaming:
-            #  
-            else:
-                embed.add_field(name='Nome', value=activity.name, inline=False)
-                embed.add_field(name='Detalhes', value=activity.details, inline=False)
-                embed.add_field(name='Estado', value=activity.state if not activity.party else f'{activity.state} ({activity.party["size"][0]}/{activity.party["size"][1]})', inline=False)
-            if hasattr(activity, 'start'):
-                if activity.start:
-                    start = activity.start.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Brazil/East'))
-                    embed.add_field(name='Começo', value=start.strftime('%d/%m/%y %H:%M:%S'), inline=False)
-                    elapsed = datetime.datetime.now(tz=pytz.timezone('Brazil/East')) - start
-                    embed.add_field(name='Decorrido', value=str(datetime.timedelta(seconds=elapsed.seconds)), inline=False)
+            if page > len(non_custom):
+                if user == ctx.message.author:
+                    return await ctx.reply('Parece que você não está com nenhuma atividade no status')
+                return await ctx.reply('Parece que esse usuário não está com nenhuma atividade no status')
+            activity = non_custom[page]
 
-            '''if activity.created_at:
-                logtime = activity.created_at.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Brazil/East'))
-                embed.add_field(name='Criado', value=logtime.strftime('%d/%m/%y %H:%M:%S'), inline=False)
-                if activity.timestamps:
-                    if activity.timestamps['start']:
-                        #sla = datetime.datetime.utcfromtimestamp(int(activity.timestamps['start']))
-                        #print(sla)'''
+
+        class MyEmbed():
+            def __init__(self, activity: discord.Activity, username: str):
+                self.embed = discord.Embed(timestamp=datetime.datetime.utcnow())
+                self.activity = activity
+                self.username = username
+                self.activity_set = False
+                self.activity_type = None
+                self.acrivity_color = None
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_value, exc_tb):
+                return True
+
+            def __call__(self, activ_type: str, activ_color: int=None):
+                self.activity_type = activ_type
+                if activ_color:
+                    self.embed.colour = activ_color
+                return self
+
+            def ActivityField(self, attr: str, name: str):
+                attr = getattr(self.activity, attr, None)
+                if attr is not None:
+                    if self.activity_type and not self.activity_set:
+                        self.embed.add_field(name=f'__{self.username} está {self.activity_type}__', value='\u200b', inline=False)
+                        self.activity_set = True
+                    self.embed.add_field(name=name, value=attr, inline=False)
+                    return True
+                return False
+
+            def ActivityStatus(self, status: str, attr: str, activ_color: int=None):
+                attr = getattr(self.activity, attr, None)
+                if attr is not None:
+                    if activ_color:
+                        self.embed.colour = activ_color
+                    self.activity_type = f'{status} {attr}'
+                    return True
+                return False
+
+
+        if activity:
+            embed = MyEmbed(activity, user.name)
+
             if hasattr(activity, 'large_image_url'):
-                if activity.large_image_url:
-                    embed.set_thumbnail(url=activity.large_image_url)
-                    embed.description = activity.large_image_text
+                if activity.large_image_url is not None:
+                    embed.embed.set_thumbnail(url=activity.large_image_url)
+                    if hasattr(activity, 'large_image_text'):
+                        if activity.large_image_text is not None:
+                            embed.embed.description = activity.large_image_text
+
             if hasattr(activity, 'small_image_url'):
-                if activity.small_image_url:
-                    embed.set_author(name=activity.small_image_text, icon_url=activity.small_image_url)
-                    #embed.set_footer(icon_url=activity.small_image_url, text='sla')
-            await ctx.reply(embed=embed)
+                if activity.small_image_url is not None:
+                    if hasattr(activity, 'small_image_text'):
+                        if activity.small_image_text is not None:
+                            embed.embed.set_author(name=activity.small_image_text, icon_url=activity.small_image_url)
+                        else:
+                            embed.embed.set_author(name='\u200b', icon_url=activity.small_image_url)
+                    else:
+                        embed.embed.set_author(name='\u200b', icon_url=activity.small_image_url)
+
+            if hasattr(activity, 'assets'):
+                if 'large_image' in activity.assets:
+                    link = re.search('https/(.+)', activity.assets['large_image'])
+                    if link:
+                        embed.embed.set_thumbnail(url='https://' + link.group(1))
+
+            if activity.type == discord.ActivityType.listening:
+                if hasattr(activity, 'title'):
+                    with embed('Ouvindo Spotify', 0x1ed760):
+                        embed.ActivityField('title', 'Título')
+                        embed.ActivityField('artist', 'Artista')
+                        embed.ActivityField('album', 'Álbum')
+                    if hasattr(activity, 'album_cover_url'):
+                        embed.embed.set_thumbnail(url=activity.album_cover_url)
+                else:
+                    embed.ActivityStatus('Ouvindo', 'name')
+
+            if activity.type == discord.ActivityType.streaming:
+                pass
+
+            if activity.type == discord.ActivityType.watching:
+                embed.ActivityStatus('Assistindo', 'name')
+                embed.ActivityField('name', 'Nome')
+
+            if activity.type == discord.ActivityType.playing:
+                name = getattr(activity, 'name', None)
+                if name is not None:
+                    with embed(f'Jogando {name}', 0xFF0000 if name == 'YouTube' else 0x000000):
+                        embed.ActivityField('name', 'Nome')
+
+            embed.ActivityField('details', 'Detalhes')
+
+            if hasattr(activity, 'state'):
+                if activity.state is not None:
+                    if hasattr(activity, 'party'):
+                        if 'size' in activity.party:
+                            embed.embed.add_field(name='Estado', value=f'{activity.state} ({activity.party["size"][0]}/{activity.party["size"][1]})', inline=False)
+                        else:
+                            embed.ActivityField('state', 'Estado')
+                    else:
+                        embed.ActivityField('state', 'Estado')
+
+            if hasattr(activity, 'start'):
+                if activity.start is not None:
+                    timenow = datetime.datetime.now(tz=pytz.timezone('Brazil/East'))
+                    start = activity.start.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Brazil/East'))
+                    embed.embed.add_field(name='Desde', value=start.strftime(f'{"%d/%m/%y" if start.day != timenow.day else ""} %H:%M:%S'), inline=False)
+                    elapsed = timenow - start
+                    embed.embed.add_field(name='Decorrido', value=str(datetime.timedelta(seconds=elapsed.seconds)), inline=False)
+
+            if hasattr(activity, 'end'):
+                if activity.end is not None:
+                    remaining = activity.end.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Brazil/East')) - datetime.datetime.now(tz=pytz.timezone('Brazil/East'))
+                    embed.embed.add_field(name='Restante', value=str(datetime.timedelta(seconds=remaining.seconds)), inline=False)
+
+            await ctx.reply(embed=embed.embed)
 
 
     @commands.group(aliases=['encode'])
@@ -134,7 +233,7 @@ class Utilidades(commands.Cog):
         encoded = encoded.decode()
         reply = f'Base64 decodificado: ```\n{encoded}```'
         if len(reply) >= 4000:
-            await ctx.reply('Base64 decodificado:', file=discord.File(io.BytesIO(encoded), filename=f'base64_text.txt'))
+            await ctx.reply('Base64 decodificado:', file=discord.File(io.BytesIO(encoded), filename='base64_text.txt'))
         else:
             await ctx.reply(reply)
 
@@ -161,6 +260,7 @@ class Utilidades(commands.Cog):
 
         encoded = ''
         whitespaces = decoded.is_option('whitespaces', 'w')
+        decoded = unidecode.unidecode(decoded)
         if not whitespaces:
             last_char = ''
             for char in decoded.upper():
@@ -173,8 +273,8 @@ class Utilidades(commands.Cog):
         else:
             for char in decoded.upper():
                 encoded += morse_alphabet[char] + ' '
-        await ctx.reply(f'Código morse codificado `{encoded}`')
-            
+        await ctx.reply(f'Código morse codificado: `{encoded}`')
+
 
 
     @commands.group(aliases=['decode'])
@@ -189,7 +289,7 @@ class Utilidades(commands.Cog):
             image = encoded.is_option('image', 'i')
             encoded = utils.funcs.remove_formattation(encoded)
             encoded = encoded.replace('\n', '')
-                
+
         if ctx.message.attachments:
             attachment = True
             async with aiohttp.ClientSession() as session:
@@ -199,7 +299,7 @@ class Utilidades(commands.Cog):
 
         if encoded is None and not attachment:
             return await ctx.reply('Coloque um código em Base64 para ser decodificado!')
-        
+
         uri = re.findall('(data:\w+/(\w+);base64,)', encoded)
         for i in uri:
             encoded = encoded.replace(i[0], '')
@@ -230,11 +330,11 @@ class Utilidades(commands.Cog):
             except UnicodeDecodeError:
                 return await ctx.reply('Não identificado como um código em Base64')
             if len(reply) >= 4000:
-                await ctx.reply('Base64 decodificado:', file=discord.File(io.BytesIO(decoded64), filename=f'base64_text.txt'))
+                await ctx.reply('Base64 decodificado:', file=discord.File(io.BytesIO(decoded64), filename='base64_text.txt'))
             else:
                 await ctx.reply(reply)
 
-    
+
     @decodificar.command(aliases=['morse_code'])
     async def morse(self, ctx, *, encoded):
         morse_alphabet = {
@@ -275,22 +375,21 @@ class Utilidades(commands.Cog):
 
     @commands.command(aliases=['length'])
     async def textlength(self, ctx, *, text: typing.Optional[str], attachment: typing.Optional[discord.Attachment]=None):
-        args = ''
         if text:
-            args = utils.funcs.remove_formattation(text)
+            text = utils.funcs.remove_formattation(text)
         elif ctx.message.attachments:
             async with aiohttp.ClientSession() as session:
                 async with session.get(ctx.message.attachments[0].url) as response:
-                    args = await response.read()
-            args = args.decode()
+                    text = await response.read()
+            text = text.decode()
         else:
             ctx.reply('Você deve colocar alguma mensagem ou um arquivo de texto')
 
-        while args.startswith(' '):
-            args = args[1:]
+        while text.startswith(' '):
+            text = text[1:]
 
-        tmp = re.findall('(<\w*(:\w+:)\d+>)', args) # Find emojis and count them only as 1
-        length = len(args)
+        tmp = re.findall('(<\w*(:\w+:)\d+>)', text) # Find emojis and count them only as 1
+        length = len(text)
 
         if tmp:
             for group in tmp:
@@ -300,15 +399,15 @@ class Utilidades(commands.Cog):
         if length == 1:
             await ctx.reply(f'Isso é apenas {length} caracter/emoji')
         else:
-            wordcount = len(args.split())
+            wordcount = len(text.split())
             if wordcount > 1:
                 await ctx.reply(f'Esse texto tem {length} caracteres/emojis e {wordcount} palavras')
             else:
                 await ctx.reply(f'Esse texto tem {length} caracteres/emojis')
 
 
-    @commands.command(aliases=['calc', 'calculadora'])
-    async def calcular(self, ctx, *, args):
+    @commands.command(aliases=['calc', 'calculadora', 'calculate'])
+    async def calcular(self, ctx, *, args): # Its pretty messy because i couldnt use eval, but it does work and also there is a trick with numbers between parentheses
         tmp = re.search('\((.+)\)', args)
         numberslist = []
         operator = [None]

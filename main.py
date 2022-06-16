@@ -4,10 +4,12 @@ import time
 import asyncio
 import logging
 import traceback
+
 from discord.ext import commands
 import discord
 import pytz
-import utils
+
+from core import utils
 
 '''from threading import Thread
 import keep_alive
@@ -29,7 +31,7 @@ bot = commands.Bot(
     intents=discord.Intents.default().all(),
     activity=discord.Activity(type=discord.ActivityType.listening, name='comandos com " > " | >help')
     )
-bot._BotBase__cogs = commands.core._CaseInsensitiveDict()
+bot._BotBase__cogs = commands.core._CaseInsensitiveDict() # pylint: disable=protected-access
 
 
 @bot.event
@@ -57,7 +59,6 @@ async def on_ready():
     '\033[92m' + 'BOT IS NOW ONLINE.' + '\033[0m\n'
     f'Bot user: {bot.user} ID: {bot.user.id}. Running Discord.py {discord.__version__}\n'
     f'{timeanddate.strftime(f"Date: %d/%m/%y, {weekday}. Hour: %H:%M:%S")}')
-    #await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='comandos com " > " | >help'))
 
 
 @bot.event
@@ -67,7 +68,7 @@ async def on_error(event, *args, **kwargs):
     embed.description = f'```py\n{traceback.print_exc()}\n```'
     embed.timestamp = datetime.datetime.utcnow()
     await bot.appinfo.owner.send(embed=embed)
-    print(traceback.format_exc())
+    traceback.print_exc()
 
 
 @bot.event
@@ -77,7 +78,7 @@ async def on_command_error(ctx, error):
 
     cog = ctx.cog
     if cog:
-        if not cog._get_overridden_method(cog.cog_command_error) is None:
+        if not cog._get_overridden_method(cog.cog_command_error) is None: # pylint: disable=protected-access
             return
 
     error = getattr(error, 'original', error)
@@ -88,7 +89,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.BotMissingPermissions):
         permissions = '\n'.join([f'{permission}' for permission in error.missing_perms])
         return await ctx.reply(f'Eu não consegui fazer o que foi pedido pois não tenho permissão para:\n{permissions}')
-    
+
     elif isinstance(error, commands.TooManyArguments):
         return await ctx.reply('Argumentos inválidos')
 
@@ -106,7 +107,7 @@ async def on_command_error(ctx, error):
 
     elif isinstance(error, commands.NoPrivateMessage):
         return await ctx.reply('Esse comando não pode ser usado em DMs')
-    
+
     elif isinstance(error, commands.NotOwner):
         return
 
@@ -157,7 +158,7 @@ def main():
             log.warning('Failed to load external extension: %s: %s', ext, exc)
             failed = True
 
-    for root, _, files in os.walk(os.path.dirname(__file__) + r'\commands\cogs'):
+    for root, _, files in os.walk(os.path.dirname(__file__) + r'\core\commands\cogs'):
         root = root.replace(os.path.dirname(__file__), '')
         while root.startswith('\\'):
             root = root[1:]
