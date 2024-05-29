@@ -20,13 +20,13 @@ async def cog_handler(ctx, bot, mode, cog):
 
     try:
         if mode == 'reload':
-            bot.reload_extension(cog)
+            await bot.reload_extension(cog)
             return f'Cog `{cog}` recarregado!'
         elif mode == 'load':
-            bot.load_extension(cog)
+            await bot.load_extension(cog)
             return f'Cog `{cog}` carregado!'
         elif mode == 'unload':
-            bot.unload_extension(cog)
+            await bot.unload_extension(cog)
             return f'Cog `{cog}` descarregado!'
         else:
             raise RuntimeWarning(f"No mode of handling cog '{cog}' was chosen")
@@ -46,15 +46,21 @@ class Owner(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    def cog_check(self, ctx):
-        return asyncio.run(self.bot.is_owner(ctx.author))
+    async def cog_check(self, ctx):
+        loop = asyncio.get_event_loop()
+        return await self.bot.is_owner(ctx.author)
 
+    @commands.command()
+    @commands.is_owner()
+    async def sync(self, ctx):
+        await self.bot.tree.sync()
+        return await ctx.reply("Synchronized")
 
     @commands.command(aliases=['l'])
     @commands.is_owner()
     async def last(self, ctx, max_msgs: int=1, limit: int=25):
         last_msgs = []
-        bot_prefix = await self.bot.get_prefix(ctx.message)
+        bot_prefix = await self.bot.get_prefix(ctx.message) # Or just remember the last command?
         async for message in ctx.channel.history(limit=limit):
             if message.author == ctx.message.author:
                 if message.content.startswith(tuple(bot_prefix)):
@@ -133,10 +139,10 @@ class Owner(commands.Cog):
         failed = False
         for cog in cogs:
             try:
-                self.bot.reload_extension(cog)
+                await self.bot.reload_extension(cog)
             except commands.ExtensionNotLoaded:
                 if not prevent_load:
-                    self.bot.load_extension(cog)
+                    await self.bot.load_extension(cog)
             except (commands.ExtensionFailed, commands.ExtensionError) as exc:
                 exc_type, _, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -163,7 +169,7 @@ class Owner(commands.Cog):
             reaction, _ = await self.bot.wait_for('reaction_add', timeout=10.0, check=check)
             await ctx.reply('Saindo do servidor 😢')
             await reaction.remove(self.bot.user)
-            guild = await self.bot.get_guild(int(ctx.guild.id))
+            guild = self.bot.get_guild(int(ctx.guild.id))
             await guild.leave()
         except asyncio.TimeoutError:
             await msg.remove_reaction('✅', self.bot.user)
@@ -236,5 +242,5 @@ class Owner(commands.Cog):
                 await ctx.reply(f'Exception: ```py\n{exc}```')
 
 
-def setup(bot):
-    bot.add_cog(Owner(bot))
+async def setup(bot):
+    await bot.add_cog(Owner(bot))

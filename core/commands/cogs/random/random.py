@@ -32,5 +32,5 @@ class Random(commands.Cog, name='Aleatórios'):
     async def gusta(self, ctx, *, text):
         await ctx.reply(', '.join(text.split(',')))
 
-def setup(bot):
-    bot.add_cog(Random(bot))
+async def setup(bot):
+    await bot.add_cog(Random(bot))

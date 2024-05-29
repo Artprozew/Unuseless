@@ -35,8 +35,8 @@ class CustomHelp(commands.HelpCommand):
 
     async def send_bot_help(self, mapping):
         embed = discord.Embed(title='Ajuda', timestamp=datetime.datetime.utcnow(), description=
-        f'O prefixo do bot para esse servidor é " **{self.clean_prefix}** " \n'
-        f'Você pode digitar **{self.clean_prefix}ajuda [comando | grupo]** para saber mais sobre um comando ou grupo de comandos\n\n')
+        f'O prefixo do bot para esse servidor é " **{self.context.prefix}** " \n'
+        f'Você pode digitar **{self.context.prefix}ajuda [comando | grupo]** para saber mais sobre um comando ou grupo de comandos\n\n')
         embed.add_field(name='Grupos de comandos', value='\u200b', inline=False)
 
         for cog, command in mapping.items():
@@ -132,7 +132,7 @@ class Help(commands.Cog, name='Ajuda'):
         attributes = {
             'name': 'ajuda',
             'aliases': ['help', 'commands', 'cmds', 'cmd', 'comandos', 'comando'],
-            'cooldown': commands.Cooldown(2, 5.0, commands.BucketType.user)
+            'cooldown': commands.CooldownMapping.from_cooldown(1, 2, commands.BucketType.user)
         }
         bot.help_command = CustomHelp(command_attrs=attributes)
         bot.help_command.cog = self
@@ -145,5 +145,5 @@ class Help(commands.Cog, name='Ajuda'):
         self.bot.help_command = self._original_help_command
 
 
-def setup(bot):
-    bot.add_cog(Help(bot))
+async def setup(bot):
+    await bot.add_cog(Help(bot))

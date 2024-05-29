@@ -5,6 +5,7 @@ import typing
 
 import discord
 from discord.ext import commands
+from discord import app_commands
 
 from core import utils # pylint: disable=import-error
 
@@ -181,19 +182,18 @@ class Fun(commands.Cog, name='Diversão'):
                 await asyncio.sleep(0.7)
 
 
-    @commands.command()
+    @commands.hybrid_command(name="impostor")
     @commands.max_concurrency(1, commands.BucketType.guild)
-    async def impostor(self, ctx, *, args):
+    async def impostor(self, ctx, *, args : str):
         msg = await ctx.channel.send('.')
         currmsg = ''
         for char in args:
             if char == ' ':
                 currmsg += char
-                continue
             else:
                 currmsg += char
                 await msg.edit(content=currmsg)
                 await asyncio.sleep(0.7)
 
-def setup(bot):
-    bot.add_cog(Fun(bot))
+async def setup(bot):
+    await bot.add_cog(Fun(bot))

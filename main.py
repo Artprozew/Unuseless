@@ -140,20 +140,20 @@ async def on_command_error(ctx, error):
                 if error.status == 400 and error.code == 50006:
                     await ctx.reply('Parece que a ordem dos argumentos não está certa ou há argumentos faltando na mensagem.')
         else:
-            ctx.reply('Houve um erro ao reproduzir esse comando, as informações do erro foram enviadas para o desenvolvedor.')
+            await ctx.reply('Houve um erro ao reproduzir esse comando, as informações do erro foram enviadas para o desenvolvedor.')
             print(f'Erro na execução do comando: {ctx.command}: {error}')
             traceback.print_exception(type(error), error, error.__traceback__)
             log.warning('Erro na execução do comando: %s: %s', ctx.command, error)
 
 
-def main():
+async def main():
     log.info('Loading extensions...')
     start_perf = time.perf_counter()
     failed = False
     additional_ext = ['jishaku']
     for ext in additional_ext:
         try:
-            bot.load_extension(ext)
+            await bot.load_extension(ext)
         except (commands.ExtensionNotFound, commands.NoEntryPointError, commands.ExtensionFailed, ModuleNotFoundError) as exc:
             log.warning('Failed to load external extension: %s: %s', ext, exc)
             failed = True
@@ -165,7 +165,7 @@ def main():
         for file in files:
             if file.endswith('.py'):
                 try:
-                    bot.load_extension('{}.{}'.format(root.replace('\\\\', '.').replace('\\', '.').replace('/', '.'), file[:-3]))
+                    await bot.load_extension('{}.{}'.format(root.replace('\\\\', '.').replace('\\', '.').replace('/', '.'), file[:-3]))
                 except (commands.ExtensionNotFound, commands.NoEntryPointError, commands.ExtensionFailed, ModuleNotFoundError) as exc:
                     log.warning('Failed to load extension: %s: %s', file, exc)
                     traceback.print_exc()
@@ -173,8 +173,9 @@ def main():
     if not failed:
         log.info('Loaded all extensions successfully in %fs', time.perf_counter() - start_perf)
 
-    bot.run(os.environ['bot_token'])
+    async with bot:
+        await bot.start(os.environ['bot_token'])
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

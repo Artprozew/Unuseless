@@ -299,7 +299,7 @@ class Utilidades(commands.Cog):
         if encoded is None and not attachment:
             return await ctx.reply('Coloque um código em Base64 para ser decodificado!')
 
-        uri = re.findall('(data:\w+/(\w+);base64,)', encoded)
+        uri = re.findall(r'(data:\w+/(\w+);base64,)', encoded)
         for i in uri:
             encoded = encoded.replace(i[0], '')
             image = i[1]
@@ -387,7 +387,7 @@ class Utilidades(commands.Cog):
         while text.startswith(' '):
             text = text[1:]
 
-        tmp = re.findall('(<\w*(:\w+:)\d+>)', text) # Find emojis and count them only as 1
+        tmp = re.findall(r'(<\w*(:\w+:)\d+>)', text) # Find emojis and count them only as 1
         length = len(text)
 
         if tmp:
@@ -407,7 +407,7 @@ class Utilidades(commands.Cog):
 
     @commands.command(aliases=['calc', 'calculadora', 'calculate'])
     async def calcular(self, ctx, *, args): # Its pretty messy because i couldnt use eval, but it does work and also there is a trick with numbers between parentheses
-        tmp = re.search('\((.+)\)', args)
+        tmp = re.search(r'\((.+)\)', args)
         numberslist = []
         operator = [None]
         operant = []
@@ -461,7 +461,7 @@ class Utilidades(commands.Cog):
                 value = splitted
             if value.isnumeric():
                 operant.append(int(value))
-            if re.search('^\d+\.?\d*$', value):
+            if re.search(r'^\d+\.?\d*$', value):
                 operant.append(float(value))
             #args = splitted
             for i in value.split():
@@ -473,7 +473,7 @@ class Utilidades(commands.Cog):
             print(i)
             if i.isnumeric():
                 operant.append(int(i))
-            elif re.search('^\d+\.?\d*$', i):
+            elif re.search(r'^\\d+\\.?\\d*$', i):
                 operant.append(float(i))'''
         operator = [None]
         operant = []
@@ -493,20 +493,20 @@ class Utilidades(commands.Cog):
                 operator.append('**')
             elif value.isnumeric():
                 operant.append(int(value))
-            elif re.search('^\d+\.?\d*$', value):
+            elif re.search(r'^\d+\.?\d*$', value):
                 operant.append(float(value))
             else:
-                tmp = re.search('^(?:(\*\*|\^|\*|x|\+|-|/))(\d+.?\d*)$', value)
+                tmp = re.search(r'^(?:(\*\*|\^|\*|x|\+|-|/))(\d+.?\d*)$', value)
                 if tmp:
                     message2.insert(index + 1, tmp.group(2))
                     message2.insert(index + 1, tmp.group(1))
                 else:
-                    tmp = re.search('^(\d+.?\d*)(?:(\*\*|\^|\*|x|\+|-|/))$')
+                    tmp = re.search(r'^(\d+.?\d*)(?:(\*\*|\^|\*|x|\+|-|/))$')
                     if tmp:
                         message2.insert(index + 1, tmp.group(2))
                         message2.insert(index + 1, tmp.group(1))
                     else:
-                        tmp = re.search('^(\d+.?\d*)(?:(\*\*|\^|\*|x|\+|-|/))(\d+.?\d*)$')
+                        tmp = re.search(r'^(\d+.?\d*)(?:(\*\*|\^|\*|x|\+|-|/))(\d+.?\d*)$')
                         if tmp:
                             message2.insert(index + 1, tmp.group(3))
                             message2.insert(index + 1, tmp.group(2))
@@ -561,7 +561,7 @@ class Utilidades(commands.Cog):
         if storedoperator:
             operator[1] = storedoperator
         if numberslist:
-            if re.search('\d+\.?\d*', str(result)):
+            if re.search(r'\d+\.?\d*', str(result)):
                 result_isfloat = True
             else:
                 result_isfloat = False
@@ -592,5 +592,5 @@ class Utilidades(commands.Cog):
             await ctx.reply(f'Resultado: {result}')
 
 
-def setup(bot):
-    bot.add_cog(Utilidades(bot))
+async def setup(bot):
+    await bot.add_cog(Utilidades(bot))
